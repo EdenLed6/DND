@@ -5,6 +5,7 @@ import { ABILITIES, ABILITY_LABELS, formatMod, EXHAUSTION_EFFECTS, type Ability 
 import { xpToNextLevel, levelForXp } from "@/lib/dnd/rules";
 import type { DerivedCharacter } from "@/lib/dnd/character";
 import { useRealtime } from "@/lib/realtime/useRealtime";
+import { InventoryManager } from "./InventoryManager";
 
 const CONDITIONS = ["Blinded","Charmed","Deafened","Frightened","Grappled","Incapacitated","Invisible","Paralyzed","Petrified","Poisoned","Prone","Restrained","Stunned","Unconscious"];
 
@@ -207,24 +208,17 @@ export function CharacterSheet({ initialCharacter, derived, canEdit, isDM }: {
               {(["pp","gp","ep","sp","cp"] as const).map((coin) => (
                 <div key={coin} className="stat-box">
                   <div className="text-[10px] uppercase text-[#a9977c]">{coin}</div>
-                  <div>{(c as any)[coin]}</div>
+                  {canEdit ? (
+                    <input className="w-full bg-transparent text-center outline-none" type="number" min={0}
+                      value={(c as any)[coin]} onChange={(e) => setC((p: any) => ({ ...p, [coin]: Math.max(0, +e.target.value) }))}
+                      onBlur={(e) => patch({ [coin]: Math.max(0, +e.target.value) })} />
+                  ) : <div>{(c as any)[coin]}</div>}
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="card">
-            <h3 className="mb-2 font-display text-gold">ציוד</h3>
-            {c.items.length === 0 ? <p className="text-sm text-[#a9977c]">ריק. ה-DM/הקומפנדיום יוסיפו פריטים.</p> : (
-              <ul className="text-sm">{c.items.map((it: any) => (
-                <li key={it.id} className="flex justify-between border-t border-[#241d17] py-1">
-                  <span>{it.equipped ? "🛡 " : ""}{it.name} {it.quantity > 1 ? `×${it.quantity}` : ""}</span>
-                  {it.attuned && <span className="text-arcane text-xs">attuned</span>}
-                </li>
-              ))}</ul>
-            )}
-            <div className="mt-2 text-xs text-[#a9977c]">Carry: {derived.carryCapacity} lb</div>
-          </div>
+          <InventoryManager characterId={c.id} items={c.items} canEdit={canEdit} carryCapacity={derived.carryCapacity} />
         </div>
       </div>
       {isDM && <div className="text-center text-xs text-[#a9977c]">👑 מצב DM — יש לך שליטה מלאה על דמות זו</div>}
