@@ -41,6 +41,19 @@ export function DashboardActions() {
       <button className="btn-primary" onClick={() => { setModal("campaign"); setError(null); }}>➕ קמפיין חדש</button>
       <button className="btn-ghost" onClick={() => { setModal("join"); setError(null); }}>🔑 הצטרף לקמפיין</button>
       <Link href="/characters/new" className="btn-gold">🎭 דמות חדשה</Link>
+      <label className="btn-ghost cursor-pointer">
+        ⬆ ייבא דמות
+        <input type="file" accept=".json,application/json" className="hidden" onChange={async (e) => {
+          const file = e.target.files?.[0]; if (!file) return;
+          try {
+            const data = JSON.parse(await file.text());
+            const res = await fetch("/api/characters/import", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+            if (!res.ok) { setError((await res.json()).error ?? "ייבוא נכשל"); return; }
+            const { id } = await res.json();
+            router.push(`/characters/${id}`);
+          } catch { setError("קובץ JSON לא תקין"); }
+        }} />
+      </label>
 
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setModal(null)}>

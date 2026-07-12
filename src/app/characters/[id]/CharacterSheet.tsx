@@ -68,6 +68,7 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, canEdi
           </div>
           <button onClick={() => canEdit && patch({ inspiration: !c.inspiration })}
             className={c.inspiration ? "btn-gold" : "btn-ghost"} title="Inspiration">💡</button>
+          <a href={`/api/characters/${c.id}/export`} className="btn-ghost" title="ייצא JSON" download>⬇</a>
         </div>
       </div>
 
