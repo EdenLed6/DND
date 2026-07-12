@@ -79,12 +79,19 @@ test("parse goblin scimitar attack", () => {
   assert.equal(a.reach, "5 ft.");
 });
 
-test("resolve attack hits high AC deterministically on crit path", () => {
+test("resolve attack vs AC 1 hits unless natural 1", () => {
   const a = parseAttack("Bite", "Melee Weapon Attack: +7 to hit, reach 5 ft. Hit: 10 (2d6 + 3) piercing damage.");
-  // AC 1 => always hit
-  const out = resolveAttackRoll(a, { name: "Dummy", ac: 1 });
-  assert.equal(out.hit, true);
-  assert.ok(out.damage >= 5);
+  for (let i = 0; i < 60; i++) {
+    const out = resolveAttackRoll(a, { name: "Dummy", ac: 1 });
+    const nat = out.attackRoll!.dice.find((d) => d.sides === 20)!.value;
+    if (nat === 1) { // natural 1 always misses, even vs AC 1
+      assert.equal(out.hit, false);
+      assert.equal(out.damage, 0);
+    } else {
+      assert.equal(out.hit, true);
+      assert.ok(out.damage >= 5); // 2d6+3 min 5 (crit 4d6+3 min 7)
+    }
+  }
 });
 
 test("temp HP absorbs before HP", () => {

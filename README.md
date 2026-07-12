@@ -12,6 +12,10 @@
 > attack rolls, initiative, combat log · distance ruler & AoE templates · 63 SVG maps
 > + map upload · **fog of war** · full SRD compendium with detail pages.
 > UI is English.
+>
+> **Installable web app (PWA):** open the site, sign up, and add it to your phone's
+> home screen for a full-screen app. Players use the mobile player view; the DM runs
+> the game from phone or desktop. Mobile-first, responsive, accessible design.
 
 ## שלושת העמודים
 1. **ניהול דמות** — יצירה מונחית-SRD + גיליון מלא (סטטים, HP/AC/הצלות, קסמים
