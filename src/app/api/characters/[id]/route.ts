@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser, bad } from "@/lib/api";
-import { canEditCharacter } from "@/lib/auth/rbac";
+import { canEditCharacter, roleInCampaign } from "@/lib/auth/rbac";
 import { emitToCampaign } from "@/lib/realtime/io";
 
 const patchSchema = z.object({
@@ -65,6 +65,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     where: { id }, include: { classes: true, skills: true, items: true, spells: true, resources: true },
   });
   if (!character) return bad("Not found", 404);
+  // Authorization: owner, or a member of the character's campaign.
+  const allowed = character.ownerId === user.id ||
+    (character.campaignId ? !!(await roleInCampaign(user.id, character.campaignId)) : false);
+  if (!allowed) return bad("Not authorized", 403);
   return NextResponse.json(character);
 }
 
