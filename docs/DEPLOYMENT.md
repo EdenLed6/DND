@@ -38,7 +38,19 @@ DATABASE_URL=postgresql://...      # מ-Railway/Neon
 NODE_ENV=production
 PORT=3000                          # Railway מזריק PORT אוטומטית
 ALLOWED_ORIGIN=https://yourdomain.com   # חובה! מגביל את חיבור ה-Socket
+APP_URL=https://yourdomain.com          # לקישורים במיילים ו-OAuth
 ```
+
+### התחברות עם Google (אופציונלי)
+1. https://console.cloud.google.com/apis/credentials → OAuth client (Web).
+2. Authorized redirect URI: `https://yourdomain.com/api/auth/google/callback`.
+3. הגדר `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`. הכפתור מופיע אוטומטית.
+
+### מיילים (אימות + איפוס סיסמה)
+- ספק ברירת מחדל: **Resend** (free tier). קבל key ב-resend.com → `RESEND_API_KEY`.
+- `EMAIL_FROM` = כתובת השולח (דומיין מאומת ב-Resend).
+- **החלפת ספק = עריכת קובץ אחד:** `src/lib/email/mailer.ts` (אין תלות/lock-in).
+- בלי key — המיילים נרשמים ל-console (פיתוח).
 
 ## שלב 4 — Build & Run
 Railway מזהה `package.json`. פקודות:

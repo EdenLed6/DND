@@ -3,6 +3,9 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { hashPassword, createSession } from "@/lib/auth/session";
 import { limitOr429 } from "@/lib/rate-limit";
+import { baseUrl } from "@/lib/api";
+import { createAuthToken } from "@/lib/auth/tokens";
+import { sendEmail, verificationEmail } from "@/lib/email/mailer";
 
 const schema = z.object({
   email: z.string().email(),
@@ -25,5 +28,15 @@ export async function POST(req: Request) {
     data: { email, displayName, passwordHash: await hashPassword(password) },
   });
   await createSession(user.id);
+
+  // Send verification email (soft — login is allowed immediately).
+  try {
+    const token = await createAuthToken(user.id, "verify", 24 * 60 * 60_000);
+    const url = `${baseUrl(req)}/api/auth/verify?token=${token}`;
+    await sendEmail({ to: email, ...verificationEmail(url) });
+  } catch (e) {
+    console.error("[register] verification email failed:", (e as Error).message);
+  }
+
   return NextResponse.json({ id: user.id, displayName: user.displayName, email: user.email });
 }

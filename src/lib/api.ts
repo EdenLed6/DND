@@ -17,3 +17,11 @@ export function genInviteCode(): string {
 export function bad(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status });
 }
+
+/** Absolute base URL for building links in emails/redirects. Prefers APP_URL. */
+export function baseUrl(req: Request): string {
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
+  const proto = req.headers.get("x-forwarded-proto") ?? "http";
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "localhost:3000";
+  return `${proto}://${host}`;
+}

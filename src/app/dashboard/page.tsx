@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { TopNav } from "@/components/TopNav";
+import { VerifyBanner } from "@/components/VerifyBanner";
 import { DashboardActions } from "./DashboardActions";
 import { levelForXp } from "@/lib/dnd/rules";
 
@@ -23,6 +24,7 @@ export default async function Dashboard() {
     <div>
       <TopNav user={user} />
       <main className="mx-auto max-w-5xl space-y-8 p-6">
+        <VerifyBanner verified={!!(user as { emailVerified?: Date | null }).emailVerified} />
         <DashboardActions />
 
         <section>
