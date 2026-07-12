@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { TopNav } from "@/components/TopNav";
+import { CompendiumList } from "./CompendiumList";
 
 const TABS = [
   { key: "spells", label: "קסמים" },
@@ -64,15 +65,8 @@ export default async function Compendium({
           <input className="input" name="q" defaultValue={q} placeholder="חיפוש לפי שם..." />
           <button className="btn-primary">חפש</button>
         </form>
-        <div className="text-xs text-[#a9977c]">{rows.length} תוצאות</div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {rows.map((r) => (
-            <div key={`${tab}-${r.id}`} className="card">
-              <div className="font-display">{r.title}</div>
-              <div className="text-xs text-[#a9977c]">{r.sub}</div>
-            </div>
-          ))}
-        </div>
+        <div className="text-xs text-[#a9977c]">{rows.length} תוצאות · לחץ לפרטים מלאים</div>
+        <CompendiumList rows={rows} tab={tab} />
       </main>
     </div>
   );

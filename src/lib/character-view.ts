@@ -54,7 +54,22 @@ export async function loadCharacterView(id: string) {
     cp: character.cp, sp: character.sp, ep: character.ep, gp: character.gp, pp: character.pp,
   };
 
-  return { character, derived: derive(input) };
+  // resolve spell details for the sheet
+  let spellDetails: any[] = [];
+  if (character.spells.length) {
+    const ids = character.spells.map((s) => Number(s.spellId)).filter((n) => !isNaN(n));
+    const srd = await prisma.srdSpell.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, name: true, level: true, school: true, castingTime: true, concentration: true, ritual: true, range: true },
+    });
+    const byId = new Map(srd.map((s) => [s.id, s]));
+    spellDetails = character.spells.map((cs) => {
+      const s = byId.get(Number(cs.spellId));
+      return s ? { ...s, prepared: cs.prepared, alwaysPrepared: cs.alwaysPrepared, source: cs.source } : null;
+    }).filter(Boolean).sort((a: any, b: any) => a.level - b.level || a.name.localeCompare(b.name));
+  }
+
+  return { character, derived: derive(input), spellDetails };
 }
 
 function safeJson<T>(s: string | null | undefined, fallback: T): T {

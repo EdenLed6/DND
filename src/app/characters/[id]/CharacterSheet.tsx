@@ -6,11 +6,12 @@ import { xpToNextLevel, levelForXp } from "@/lib/dnd/rules";
 import type { DerivedCharacter } from "@/lib/dnd/character";
 import { useRealtime } from "@/lib/realtime/useRealtime";
 import { InventoryManager } from "./InventoryManager";
+import { SpellManager } from "./SpellManager";
 
 const CONDITIONS = ["Blinded","Charmed","Deafened","Frightened","Grappled","Incapacitated","Invisible","Paralyzed","Petrified","Poisoned","Prone","Restrained","Stunned","Unconscious"];
 
-export function CharacterSheet({ initialCharacter, derived, canEdit, isDM }: {
-  initialCharacter: any; derived: DerivedCharacter; canEdit: boolean; isDM: boolean;
+export function CharacterSheet({ initialCharacter, derived, spellDetails, canEdit, isDM }: {
+  initialCharacter: any; derived: DerivedCharacter; spellDetails: any[]; canEdit: boolean; isDM: boolean;
 }) {
   const router = useRouter();
   const [c, setC] = useState(initialCharacter);
@@ -199,6 +200,7 @@ export function CharacterSheet({ initialCharacter, derived, canEdit, isDM }: {
                   <div className="mt-2 text-xs text-arcane">Pact Magic: {derived.spellcasting.pact.slots} slots @ L{derived.spellcasting.pact.level}</div>
                 )}
               </div>
+              <SpellManager characterId={c.id} spells={spellDetails} casterClass={derived.spellcasting.casterClass} canEdit={canEdit} />
             </div>
           )}
 
