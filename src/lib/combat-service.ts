@@ -34,6 +34,8 @@ export async function addPlayers(encounterId: string, characterIds: string[]) {
   for (const cid of characterIds) {
     const view = await loadCharacterView(cid);
     if (!view) continue;
+    // Only characters that belong to THIS encounter's campaign may be added.
+    if (view.character.campaignId !== enc.campaignId) continue;
     const dexMod = view.derived.mods.dex;
     const combatant = await prisma.combatant.create({
       data: {
@@ -53,6 +55,8 @@ export async function addPlayers(encounterId: string, characterIds: string[]) {
 
 /** Update a token's appearance (image, color, size). */
 export async function updateToken(encounterId: string, tokenId: string, patch: { imageUrl?: string | null; color?: string; sizeSquares?: number; label?: string }) {
+  const existing = await prisma.token.findFirst({ where: { id: tokenId, encounterId } });
+  if (!existing) throw new Error("token not in this encounter");
   const data: any = {};
   for (const k of ["imageUrl", "color", "sizeSquares", "label"] as const) if (k in patch) data[k] = patch[k];
   const t = await prisma.token.update({ where: { id: tokenId }, data });
@@ -121,6 +125,9 @@ export async function turn(encounterId: string, dir: "next" | "prev" | "end") {
 }
 
 export async function updateCombatant(encounterId: string, combatantId: string, patch: any) {
+  // Scope: the combatant must belong to this encounter.
+  const existing = await prisma.combatant.findFirst({ where: { id: combatantId, encounterId } });
+  if (!existing) throw new Error("combatant not in this encounter");
   const data: any = {};
   for (const k of ["currentHp", "tempHp", "ac", "initiative", "name", "isVisible"]) if (k in patch) data[k] = patch[k];
   if ("conditions" in patch) data.conditions = JSON.stringify(patch.conditions);
@@ -134,12 +141,16 @@ export async function updateCombatant(encounterId: string, combatantId: string, 
 }
 
 export async function removeCombatant(encounterId: string, combatantId: string) {
+  const existing = await prisma.combatant.findFirst({ where: { id: combatantId, encounterId } });
+  if (!existing) throw new Error("combatant not in this encounter");
   await prisma.token.deleteMany({ where: { combatantId } });
   await prisma.combatant.delete({ where: { id: combatantId } });
   emitToEncounter(encounterId, "combatants:changed", { encounterId });
 }
 
 export async function moveToken(encounterId: string, tokenId: string, gridX: number, gridY: number) {
+  const existing = await prisma.token.findFirst({ where: { id: tokenId, encounterId } });
+  if (!existing) throw new Error("token not in this encounter");
   const t = await prisma.token.update({ where: { id: tokenId }, data: { gridX, gridY } });
   emitToEncounter(encounterId, "token:moved", { tokenId, gridX, gridY });
   return t;
@@ -183,13 +194,14 @@ export async function attack(
   encounterId: string, attackerId: string, actionName: string, targetIds: string[],
   opts: { advantage?: boolean; disadvantage?: boolean } = {}
 ) {
-  const attacker = await prisma.combatant.findUnique({ where: { id: attackerId } });
-  if (!attacker) throw new Error("no attacker");
+  // Scope: attacker and all targets must belong to this encounter.
+  const attacker = await prisma.combatant.findFirst({ where: { id: attackerId, encounterId } });
+  if (!attacker) throw new Error("attacker not in this encounter");
   const actions = parseActions(safe(attacker.statBlockJson)?.actions ?? null);
   const action = actions.find((a) => a.name === actionName) ?? actions[0];
   if (!action) throw new Error("no action");
 
-  const targets = await prisma.combatant.findMany({ where: { id: { in: targetIds } } });
+  const targets = await prisma.combatant.findMany({ where: { id: { in: targetIds }, encounterId } });
   const outcomes = [];
   for (const t of targets) {
     let dexMod = 0; try { dexMod = JSON.parse(t.statBlockJson || "{}").dexMod ?? 0; } catch {}

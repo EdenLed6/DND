@@ -13,6 +13,10 @@ function sweep(now: number) {
   for (const [k, b] of buckets) if (b.resetAt <= now) buckets.delete(k);
 }
 
+// NOTE: trusts X-Forwarded-For. This is safe ONLY when the app runs behind a
+// trusted reverse proxy (Railway/Render/Cloudflare) that overwrites this header.
+// Do not expose the Node server directly to the internet, or clients could spoof
+// XFF to evade limits. (See docs/DEPLOYMENT.md.)
 export function clientIp(req: Request): string {
   const xff = req.headers.get("x-forwarded-for");
   if (xff) return xff.split(",")[0].trim();

@@ -14,8 +14,17 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const { user, res } = await requireUser();
   if (!user) return res!;
   const campaignId = await encCampaign(id);
-  if (!campaignId || !(await roleInCampaign(user.id, campaignId))) return bad("No access", 403);
+  const role = campaignId ? await roleInCampaign(user.id, campaignId) : null;
+  if (!campaignId || !role) return bad("No access", 403);
   const state = await combat.encounterState(id);
+  if (state && role !== "DM") {
+    // Players must not see DM-hidden combatants, their tokens, or raw stat blocks.
+    const hiddenIds = new Set(state.combatants.filter((c) => !c.isVisible).map((c) => c.id));
+    state.combatants = state.combatants
+      .filter((c) => c.isVisible)
+      .map((c) => ({ ...c, statBlockJson: null }));
+    state.tokens = state.tokens.filter((t) => !t.combatantId || !hiddenIds.has(t.combatantId));
+  }
   return NextResponse.json(state);
 }
 
@@ -75,7 +84,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       default: return bad("Unknown op: " + op);
     }
   } catch (e: any) {
-    return bad(e.message ?? "error", 400);
+    console.error(`[encounter ${id}] op ${op} failed:`, e?.message ?? e);
+    return bad("Operation could not be completed", 400);
   }
   return NextResponse.json({ ok: true });
 }
