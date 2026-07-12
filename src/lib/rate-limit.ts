@@ -13,14 +13,22 @@ function sweep(now: number) {
   for (const [k, b] of buckets) if (b.resetAt <= now) buckets.delete(k);
 }
 
-// NOTE: trusts X-Forwarded-For. This is safe ONLY when the app runs behind a
-// trusted reverse proxy (Railway/Render/Cloudflare) that overwrites this header.
-// Do not expose the Node server directly to the internet, or clients could spoof
-// XFF to evade limits. (See docs/DEPLOYMENT.md.)
+// Determine the client IP for rate limiting, resistant to header spoofing.
+// A client can only prepend to X-Forwarded-For; the trusted proxy APPENDS the
+// real connecting IP, so we take the RIGHTMOST entry (nearest trusted hop),
+// not the leftmost (client-controlled). Cloudflare/nginx set dedicated headers
+// which we prefer. Behind a trusted proxy this cannot be spoofed by the client.
 export function clientIp(req: Request): string {
+  const cf = req.headers.get("cf-connecting-ip");
+  if (cf) return cf.trim();
+  const real = req.headers.get("x-real-ip");
+  if (real) return real.trim();
   const xff = req.headers.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0].trim();
-  return req.headers.get("x-real-ip") ?? "unknown";
+  if (xff) {
+    const parts = xff.split(",").map((s) => s.trim()).filter(Boolean);
+    if (parts.length) return parts[parts.length - 1]; // rightmost = added by trusted proxy
+  }
+  return "unknown";
 }
 
 /** Returns { ok, retryAfter } for `key`, allowing `limit` hits per `windowMs`. */

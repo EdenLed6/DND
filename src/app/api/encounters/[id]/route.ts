@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireUser, bad } from "@/lib/api";
+import { requireUser, bad, safeImageUrl } from "@/lib/api";
 import { isDM, roleInCampaign } from "@/lib/auth/rbac";
 import * as combat from "@/lib/combat-service";
 
@@ -16,15 +16,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const campaignId = await encCampaign(id);
   const role = campaignId ? await roleInCampaign(user.id, campaignId) : null;
   if (!campaignId || !role) return bad("No access", 403);
-  const state = await combat.encounterState(id);
-  if (state && role !== "DM") {
-    // Players must not see DM-hidden combatants, their tokens, or raw stat blocks.
-    const hiddenIds = new Set(state.combatants.filter((c) => !c.isVisible).map((c) => c.id));
-    state.combatants = state.combatants
-      .filter((c) => c.isVisible)
-      .map((c) => ({ ...c, statBlockJson: null }));
-    state.tokens = state.tokens.filter((t) => !t.combatantId || !hiddenIds.has(t.combatantId));
-  }
+  const state = combat.filterStateForRole(await combat.encounterState(id), role === "DM");
   return NextResponse.json(state);
 }
 
@@ -60,7 +52,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       case "turn": await combat.turn(id, body.dir); break;
       case "updateCombatant": await combat.updateCombatant(id, body.combatantId, body.patch ?? {}); break;
       case "removeCombatant": await combat.removeCombatant(id, body.combatantId); break;
-      case "updateToken": await combat.updateToken(id, body.tokenId, body.patch ?? {}); break;
+      case "updateToken": {
+        const patch = { ...(body.patch ?? {}) };
+        if ("imageUrl" in patch) patch.imageUrl = patch.imageUrl ? safeImageUrl(patch.imageUrl) : null;
+        await combat.updateToken(id, body.tokenId, patch); break;
+      }
       case "setFog": await combat.setFog(id, !!body.enabled); break;
       case "revealCells": await combat.revealCells(id, body.cells ?? [], body.reveal !== false); break;
       case "setAllCells": await combat.setAllCells(id, !!body.revealAll); break;

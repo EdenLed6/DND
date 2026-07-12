@@ -48,6 +48,12 @@ export async function GET(req: Request) {
     let user = await prisma.user.findUnique({ where: { googleId: info.sub } });
     if (!user) {
       const byEmail = await prisma.user.findUnique({ where: { email: info.email } });
+      // Only auto-link to a pre-existing (password) account if Google asserts the
+      // email is verified — otherwise a Google account with an unverified address
+      // could be linked to someone else's account.
+      if (byEmail && !info.email_verified) {
+        return NextResponse.redirect(`${base}/login?error=google_unverified`);
+      }
       if (byEmail) {
         user = await prisma.user.update({
           where: { id: byEmail.id },

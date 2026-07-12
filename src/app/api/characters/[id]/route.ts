@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireUser, bad } from "@/lib/api";
+import { requireUser, bad, safeImageUrl } from "@/lib/api";
 import { canEditCharacter, roleInCampaign } from "@/lib/auth/rbac";
 import { emitToCampaign } from "@/lib/realtime/io";
 
@@ -13,29 +13,29 @@ const patchSchema = z.object({
   deathSuccess: z.number().int().min(0).max(3).optional(),
   deathFail: z.number().int().min(0).max(3).optional(),
   exhaustion: z.number().int().min(0).max(6).optional(),
-  conditions: z.array(z.string()).optional(),
-  concentration: z.string().nullable().optional(),
+  conditions: z.array(z.string().max(40)).max(30).optional(),
+  concentration: z.string().max(120).nullable().optional(),
   inspiration: z.boolean().optional(),
-  avatarUrl: z.string().nullable().optional(),
-  xp: z.number().int().min(0).optional(),
-  cp: z.number().int().min(0).optional(),
-  sp: z.number().int().min(0).optional(),
-  ep: z.number().int().min(0).optional(),
-  gp: z.number().int().min(0).optional(),
-  pp: z.number().int().min(0).optional(),
-  acOverride: z.number().int().nullable().optional(),
-  speedOverride: z.number().int().nullable().optional(),
-  maxHpBonus: z.number().int().optional(),
-  str: z.number().int().optional(), dex: z.number().int().optional(), con: z.number().int().optional(),
-  int: z.number().int().optional(), wis: z.number().int().optional(), cha: z.number().int().optional(),
-  alignment: z.string().nullable().optional(),
-  personality: z.string().nullable().optional(),
-  ideals: z.string().nullable().optional(),
-  bonds: z.string().nullable().optional(),
-  flaws: z.string().nullable().optional(),
-  backstory: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
-  spellcastingJson: z.string().optional(),
+  avatarUrl: z.string().max(2000).nullable().optional(),
+  xp: z.number().int().min(0).max(1_000_000).optional(),
+  cp: z.number().int().min(0).max(100_000_000).optional(),
+  sp: z.number().int().min(0).max(100_000_000).optional(),
+  ep: z.number().int().min(0).max(100_000_000).optional(),
+  gp: z.number().int().min(0).max(100_000_000).optional(),
+  pp: z.number().int().min(0).max(100_000_000).optional(),
+  acOverride: z.number().int().min(0).max(50).nullable().optional(),
+  speedOverride: z.number().int().min(0).max(1000).nullable().optional(),
+  maxHpBonus: z.number().int().min(-1000).max(10000).optional(),
+  str: z.number().int().min(1).max(30).optional(), dex: z.number().int().min(1).max(30).optional(), con: z.number().int().min(1).max(30).optional(),
+  int: z.number().int().min(1).max(30).optional(), wis: z.number().int().min(1).max(30).optional(), cha: z.number().int().min(1).max(30).optional(),
+  alignment: z.string().max(40).nullable().optional(),
+  personality: z.string().max(4000).nullable().optional(),
+  ideals: z.string().max(4000).nullable().optional(),
+  bonds: z.string().max(4000).nullable().optional(),
+  flaws: z.string().max(4000).nullable().optional(),
+  backstory: z.string().max(20000).nullable().optional(),
+  notes: z.string().max(20000).nullable().optional(),
+  spellcastingJson: z.string().max(20000).optional(),
 });
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -49,6 +49,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const data: any = { ...parsed.data };
   if (data.conditions) data.conditions = JSON.stringify(data.conditions);
+  // Sanitize user-supplied image URL (reject javascript:/data:/other schemes).
+  if ("avatarUrl" in data) data.avatarUrl = data.avatarUrl ? safeImageUrl(data.avatarUrl) : null;
 
   const character = await prisma.character.update({ where: { id }, data });
   if (character.campaignId) {

@@ -18,6 +18,24 @@ export async function encounterState(encounterId: string) {
   });
 }
 
+/**
+ * Redact an encounter state for a non-DM viewer: strip DM-hidden combatants,
+ * their tokens, and raw stat blocks. Used by BOTH the API GET and the SSR page
+ * so players never receive hidden monster data (fog of war / hidden combatants).
+ */
+export function filterStateForRole<T extends { combatants: any[]; tokens: any[] } | null>(
+  state: T,
+  isDM: boolean,
+): T {
+  if (!state || isDM) return state;
+  const hiddenIds = new Set(state.combatants.filter((c: any) => !c.isVisible).map((c: any) => c.id));
+  state.combatants = state.combatants
+    .filter((c: any) => c.isVisible)
+    .map((c: any) => ({ ...c, statBlockJson: null }));
+  state.tokens = state.tokens.filter((t: any) => !t.combatantId || !hiddenIds.has(t.combatantId));
+  return state;
+}
+
 async function log(encounterId: string, actor: string, message: string, detail?: any) {
   const entry = await prisma.combatLog.create({
     data: { encounterId, actor, message, detailJson: detail ? JSON.stringify(detail) : null },
@@ -136,7 +154,9 @@ export async function updateCombatant(encounterId: string, combatantId: string, 
   if (c.kind === "player" && c.characterId && ("currentHp" in patch || "tempHp" in patch)) {
     await prisma.character.update({ where: { id: c.characterId }, data: { currentHp: c.currentHp, tempHp: c.tempHp } });
   }
-  emitToEncounter(encounterId, "combatant:changed", { combatant: c });
+  // Do NOT broadcast the full combatant (it can include hidden monsters + raw
+  // stat blocks). Clients refetch the role-filtered state on this event.
+  emitToEncounter(encounterId, "combatant:changed", { encounterId, combatantId: c.id });
   return c;
 }
 

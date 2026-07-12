@@ -2,7 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { roleInCampaign } from "@/lib/auth/rbac";
-import { encounterState } from "@/lib/combat-service";
+import { encounterState, filterStateForRole } from "@/lib/combat-service";
 import { TopNav } from "@/components/TopNav";
 import { PlayScreen } from "./PlayScreen";
 
@@ -17,12 +17,14 @@ export default async function PlayPage({ params }: { params: Promise<{ encId: st
   if (!role) redirect("/dashboard");
   const isDM = role === "DM";
 
-  const [state, campaignChars, maps, myChars] = await Promise.all([
+  const [rawState, campaignChars, maps, myChars] = await Promise.all([
     encounterState(encId),
     prisma.character.findMany({ where: { campaignId: enc.campaignId }, select: { id: true, name: true } }),
     prisma.gameMap.findMany({ where: { campaignId: enc.campaignId } }),
     prisma.character.findMany({ where: { campaignId: enc.campaignId, ownerId: user.id }, select: { id: true } }),
   ]);
+  // Redact DM-hidden combatants/tokens/stat blocks for non-DM players (fog of war).
+  const state = filterStateForRole(rawState, isDM);
 
   return (
     <div>

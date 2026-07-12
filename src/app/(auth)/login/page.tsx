@@ -8,6 +8,7 @@ const ERRORS: Record<string, string> = {
   google_denied: "Google sign-in was cancelled.",
   google_state: "Google sign-in failed (session mismatch). Please try again.",
   google_failed: "Google sign-in failed. Please try again.",
+  google_unverified: "Your Google email isn't verified, so we can't link it to an existing account. Sign in with your password instead.",
 };
 
 export default function LoginPage() {

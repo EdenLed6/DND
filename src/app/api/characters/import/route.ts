@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireUser, bad } from "@/lib/api";
+import { requireUser, bad, safeImageUrl } from "@/lib/api";
 import { roleInCampaign } from "@/lib/auth/rbac";
 import { emitToCampaign } from "@/lib/realtime/io";
 import { limitOr429 } from "@/lib/rate-limit";
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       ownerId: user.id,
       campaignId,
       name: (c.name ?? "Imported") + "",
-      avatarUrl: c.avatarUrl ?? null,
+      avatarUrl: safeImageUrl(c.avatarUrl),
       raceId: c.raceId ?? "Human", subrace: c.subrace ?? null, background: c.background ?? null,
       alignment: c.alignment ?? null,
       str: c.str ?? 10, dex: c.dex ?? 10, con: c.con ?? 10, int: c.int ?? 10, wis: c.wis ?? 10, cha: c.cha ?? 10,
