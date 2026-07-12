@@ -51,6 +51,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       case "turn": await combat.turn(id, body.dir); break;
       case "updateCombatant": await combat.updateCombatant(id, body.combatantId, body.patch ?? {}); break;
       case "removeCombatant": await combat.removeCombatant(id, body.combatantId); break;
+      case "setFog": await combat.setFog(id, !!body.enabled); break;
+      case "revealCells": await combat.revealCells(id, body.cells ?? [], body.reveal !== false); break;
+      case "setAllCells": await combat.setAllCells(id, !!body.revealAll); break;
       case "setMap": {
         await prisma.encounter.update({ where: { id }, data: { mapId: body.mapId ?? null } });
         break;

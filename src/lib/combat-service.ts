@@ -136,6 +136,39 @@ export async function moveToken(encounterId: string, tokenId: string, gridX: num
   return t;
 }
 
+/** Toggle fog of war on/off for an encounter. */
+export async function setFog(encounterId: string, enabled: boolean) {
+  await prisma.encounter.update({ where: { id: encounterId }, data: { fogEnabled: enabled } });
+  const enc = await prisma.encounter.findUnique({ where: { id: encounterId } });
+  emitToEncounter(encounterId, "fog:changed", { fogEnabled: enabled, revealedCells: enc?.revealedCells });
+}
+
+/** Reveal or hide a set of "x,y" cells. */
+export async function revealCells(encounterId: string, cells: string[], reveal: boolean) {
+  const enc = await prisma.encounter.findUnique({ where: { id: encounterId } });
+  if (!enc) return;
+  let set: Set<string>;
+  try { set = new Set(JSON.parse(enc.revealedCells || "[]")); } catch { set = new Set(); }
+  for (const c of cells) reveal ? set.add(c) : set.delete(c);
+  const revealed = JSON.stringify([...set]);
+  await prisma.encounter.update({ where: { id: encounterId }, data: { revealedCells: revealed } });
+  emitToEncounter(encounterId, "fog:changed", { fogEnabled: enc.fogEnabled, revealedCells: revealed });
+}
+
+/** Reveal everything or hide everything. */
+export async function setAllCells(encounterId: string, revealAll: boolean) {
+  const enc = await prisma.encounter.findUnique({ where: { id: encounterId }, include: { map: true } });
+  if (!enc) return;
+  let revealed = "[]";
+  if (revealAll && enc.map) {
+    const all: string[] = [];
+    for (let x = 0; x < enc.map.gridCols; x++) for (let y = 0; y < enc.map.gridRows; y++) all.push(`${x},${y}`);
+    revealed = JSON.stringify(all);
+  }
+  await prisma.encounter.update({ where: { id: encounterId }, data: { revealedCells: revealed } });
+  emitToEncounter(encounterId, "fog:changed", { fogEnabled: enc.fogEnabled, revealedCells: revealed });
+}
+
 /** DM attacks: attacker combatant uses an action against target combatants. */
 export async function attack(
   encounterId: string, attackerId: string, actionName: string, targetIds: string[],

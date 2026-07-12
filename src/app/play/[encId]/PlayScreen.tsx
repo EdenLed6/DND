@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DndContext, useDraggable, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { restrictToParentElement } from "@dnd-kit/modifiers";
 import { useRealtime, useWatchEncounter } from "@/lib/realtime/useRealtime";
@@ -28,6 +28,8 @@ export function PlayScreen({ encId, campaignId, initialState, campaignChars, map
     "log:appended": refetch,
     "token:moved": ({ tokenId, gridX, gridY }: any) =>
       setState((s: any) => ({ ...s, tokens: s.tokens.map((t: any) => t.id === tokenId ? { ...t, gridX, gridY } : t) })),
+    "fog:changed": ({ fogEnabled, revealedCells }: any) =>
+      setState((s: any) => ({ ...s, fogEnabled, revealedCells: revealedCells ?? s.revealedCells })),
   }, [encId]);
 
   async function op(body: any) {
@@ -62,7 +64,7 @@ export function PlayScreen({ encId, campaignId, initialState, campaignChars, map
 
       <div className="grid gap-3 lg:grid-cols-[1fr_340px]">
         {/* MAP */}
-        <MapBoard state={state} isDM={isDM} myCharacterIds={myCharacterIds}
+        <MapBoard state={state} isDM={isDM} myCharacterIds={myCharacterIds} encId={encId}
           onMove={(tokenId: string, gridX: number, gridY: number) => {
             setState((s: any) => ({ ...s, tokens: s.tokens.map((t: any) => t.id === tokenId ? { ...t, gridX, gridY } : t) }));
             op({ op: "moveToken", tokenId, gridX, gridY });
@@ -94,14 +96,20 @@ export function PlayScreen({ encId, campaignId, initialState, campaignChars, map
 }
 
 /* ---------------- Map ---------------- */
-function MapBoard({ state, isDM, myCharacterIds, onMove, onSetMap, maps, campaignId, onMapsChanged }: any) {
+function MapBoard({ state, isDM, myCharacterIds, onMove, onSetMap, maps, campaignId, onMapsChanged, encId }: any) {
   const map = state?.map;
   const gridSize = map?.gridSize ?? 60;
   const cols = map?.gridCols ?? 20;
   const rows = map?.gridRows ?? 14;
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  const [brush, setBrush] = useState<"off" | "reveal" | "hide">("off");
+  const paintingRef = useRef<{ active: boolean; cells: Set<string> }>({ active: false, cells: new Set() }).current;
 
-  function canDrag(token: any) { return isDM || (token.characterId && myCharacterIds.includes(token.characterId)); }
+  const fogEnabled = !!state?.fogEnabled;
+  const revealed: Set<string> = (() => { try { return new Set(JSON.parse(state?.revealedCells || "[]")); } catch { return new Set(); } })();
+  const cellHidden = (x: number, y: number) => fogEnabled && !revealed.has(`${x},${y}`);
+
+  function canDrag(token: any) { return brush === "off" && (isDM || (token.characterId && myCharacterIds.includes(token.characterId))); }
 
   function onDragEnd(e: DragEndEvent) {
     const token = state.tokens.find((t: any) => t.id === e.active.id);
@@ -111,20 +119,72 @@ function MapBoard({ state, isDM, myCharacterIds, onMove, onSetMap, maps, campaig
     if (nx !== token.gridX || ny !== token.gridY) onMove(token.id, nx, ny);
   }
 
+  async function fogOp(body: any) {
+    await fetch(`/api/encounters/${encId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  }
+  function paintCell(x: number, y: number) {
+    if (brush === "off") return;
+    paintingRef.cells.add(`${x},${y}`);
+  }
+  function flushPaint() {
+    if (paintingRef.cells.size === 0) return;
+    const cells = [...paintingRef.cells]; paintingRef.cells.clear();
+    fogOp({ op: "revealCells", cells, reveal: brush === "reveal" });
+  }
+
   return (
     <div className="card overflow-auto">
       {isDM && <MapControls maps={maps} campaignId={campaignId} onSetMap={onSetMap} onMapsChanged={onMapsChanged} current={map?.id} />}
-      <div className="mt-2 text-xs text-[#a9977c]">קנה מידה: {gridSize}px = 5ft · {cols}×{rows} משבצות</div>
+      {isDM && map && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-[#a9977c]">ערפל קרב:</span>
+          <button className={fogEnabled ? "btn-gold !py-0.5" : "btn-ghost !py-0.5"} onClick={() => fogOp({ op: "setFog", enabled: !fogEnabled })}>{fogEnabled ? "פעיל" : "כבוי"}</button>
+          <button className={brush === "reveal" ? "btn-gold !py-0.5" : "btn-ghost !py-0.5"} onClick={() => setBrush(brush === "reveal" ? "off" : "reveal")}>🖌 חשוף</button>
+          <button className={brush === "hide" ? "btn-gold !py-0.5" : "btn-ghost !py-0.5"} onClick={() => setBrush(brush === "hide" ? "off" : "hide")}>🌫 הסתר</button>
+          <button className="btn-ghost !py-0.5" onClick={() => fogOp({ op: "setAllCells", revealAll: true })}>חשוף הכל</button>
+          <button className="btn-ghost !py-0.5" onClick={() => fogOp({ op: "setAllCells", revealAll: false })}>הסתר הכל</button>
+        </div>
+      )}
+      <div className="mt-2 text-xs text-[#a9977c]">קנה מידה: {gridSize}px = 5ft · {cols}×{rows} משבצות{brush !== "off" ? " · מצב מכחול פעיל (גרור על המפה)" : ""}</div>
       <DndContext sensors={sensors} modifiers={[restrictToParentElement]} onDragEnd={onDragEnd}>
-        <div className="relative mt-2" style={{ width: cols * gridSize, height: rows * gridSize,
+        <div className="relative mt-2 select-none" style={{ width: cols * gridSize, height: rows * gridSize,
           backgroundImage: map?.imageUrl ? `url(${map.imageUrl})` : undefined,
           backgroundSize: "cover", background: map?.imageUrl ? undefined : "#0d0b09" }}>
           <div className="grid-overlay absolute inset-0" style={{ backgroundSize: `${gridSize}px ${gridSize}px` }} />
+
+          {/* Fog display layer */}
+          {fogEnabled && Array.from({ length: rows }).map((_, y) =>
+            Array.from({ length: cols }).map((_, x) => cellHidden(x, y) && (
+              <div key={`fog-${x}-${y}`} className="absolute" style={{
+                left: x * gridSize, top: y * gridSize, width: gridSize, height: gridSize,
+                background: "#000", opacity: isDM ? 0.5 : 1, pointerEvents: "none", zIndex: 20,
+              }} />
+            ))
+          )}
+
           {state.tokens.map((t: any) => {
             const combatant = state.combatants.find((c: any) => c.id === t.combatantId);
             if (combatant && !combatant.isVisible && !isDM) return null;
+            if (!isDM && cellHidden(t.gridX, t.gridY)) return null; // hidden by fog for players
             return <TokenView key={t.id} token={t} combatant={combatant} gridSize={gridSize} draggable={canDrag(t)} dm={isDM} />;
           })}
+
+          {/* Fog paint layer (DM brush mode) */}
+          {isDM && brush !== "off" && (
+            <div className="absolute inset-0" style={{ zIndex: 40 }}
+              onPointerDown={() => { paintingRef.active = true; }}
+              onPointerUp={() => { paintingRef.active = false; flushPaint(); }}
+              onPointerLeave={() => { if (paintingRef.active) { paintingRef.active = false; flushPaint(); } }}>
+              {Array.from({ length: rows }).map((_, y) =>
+                Array.from({ length: cols }).map((_, x) => (
+                  <div key={`paint-${x}-${y}`} className="absolute border border-white/10"
+                    style={{ left: x * gridSize, top: y * gridSize, width: gridSize, height: gridSize, cursor: "crosshair" }}
+                    onPointerDown={() => paintCell(x, y)}
+                    onPointerEnter={() => paintingRef.active && paintCell(x, y)} />
+                ))
+              )}
+            </div>
+          )}
         </div>
       </DndContext>
     </div>

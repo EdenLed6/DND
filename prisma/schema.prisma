@@ -248,10 +248,12 @@ model Encounter {
   campaignId String
   mapId      String?
   name       String
-  status     String      @default("PLANNING") // PLANNING | ACTIVE | ENDED
-  round      Int         @default(0)
-  turnIndex  Int         @default(0)
-  createdAt  DateTime    @default(now())
+  status       String    @default("PLANNING") // PLANNING | ACTIVE | ENDED
+  round        Int       @default(0)
+  turnIndex    Int       @default(0)
+  fogEnabled   Boolean   @default(false)
+  revealedCells String   @default("[]") // JSON string[] of "x,y" cells revealed
+  createdAt    DateTime  @default(now())
   campaign   Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   map        GameMap?    @relation(fields: [mapId], references: [id])
   combatants Combatant[]
