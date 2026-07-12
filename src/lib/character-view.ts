@@ -15,7 +15,7 @@ export async function loadCharacterView(id: string) {
   let equippedShield = false;
   if (equippedArmorItems.length) {
     const srdEquip = await prisma.srdEquipment.findMany({
-      where: { id: { in: equippedArmorItems.map((i) => i.srcEquipmentId!).filter(Boolean) } },
+      where: { id: { in: equippedArmorItems.map((i) => Number(i.srcEquipmentId)).filter((n) => !isNaN(n)) } },
     });
     for (const e of srdEquip) {
       if (e.armorCategory && /shield/i.test(e.name)) equippedShield = true;

@@ -10,6 +10,7 @@ const addSchema = z.object({
   srcMagicItemId: z.number().int().optional(), srcEquipmentId: z.number().int().optional(),
   goldValueCp: z.number().int().default(0),
 });
+// LootItem stores source ids as strings (schema); convert numeric ids.
 const assignSchema = z.object({ lootId: z.string(), characterId: z.string() });
 
 // Add loot to the party pool
@@ -20,7 +21,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!(await isDM(user.id, campaignId))) return bad("רק ה-DM", 403);
   const parsed = addSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return bad("Invalid input");
-  const loot = await prisma.lootItem.create({ data: { campaignId, ...parsed.data } });
+  const { srcMagicItemId, srcEquipmentId, ...rest } = parsed.data;
+  const loot = await prisma.lootItem.create({
+    data: {
+      campaignId, ...rest,
+      srcMagicItemId: srcMagicItemId != null ? String(srcMagicItemId) : null,
+      srcEquipmentId: srcEquipmentId != null ? String(srcEquipmentId) : null,
+    },
+  });
   emitToCampaign(campaignId, "loot:added", { loot });
   return NextResponse.json(loot);
 }

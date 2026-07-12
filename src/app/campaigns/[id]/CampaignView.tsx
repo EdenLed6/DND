@@ -240,7 +240,7 @@ function PlayTab({ campaign, encounters, maps, isDM, onChange }: any) {
         {maps.length === 0 ? <p className="text-sm text-[#a9977c]">אין מפות. הוסף בעת בניית קרב.</p> : (
           <ul className="text-sm">{maps.map((m: any) => <li key={m.id} className="border-t border-[#241d17] py-1">{m.name}</li>)}</ul>
         )}
-        {isDM && <Link href={`/campaigns/${campaign.id}/maps`} className="btn-ghost">🗺 ניהול מפות</Link>}
+        {isDM && <p className="text-xs text-[#a9977c]">מפות נוצרות ומחוברות בתוך מסך הקרב (בחר קרב → “מפה חדשה”).</p>}
       </div>
     </div>
   );
