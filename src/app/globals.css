@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background: #14110f;
+  color: #ece5d8;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.parchment-panel {
+  background: linear-gradient(180deg, #201b16, #17130f);
+  border: 1px solid #3a2f24;
+  border-radius: 0.5rem;
+}
+
+.stat-box {
+  @apply flex flex-col items-center justify-center rounded-lg border border-[#3a2f24] bg-[#1b1613] px-3 py-2;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium transition;
+}
+.btn-primary { @apply btn bg-blood text-white hover:bg-red-800; }
+.btn-ghost { @apply btn border border-[#3a2f24] text-parchment hover:bg-[#241d17]; }
+.btn-gold { @apply btn bg-gold text-black hover:brightness-110; }
+
+.input {
+  @apply w-full rounded-md border border-[#3a2f24] bg-[#0f0c0a] px-3 py-2 text-parchment outline-none focus:border-gold;
+}
+.label { @apply block text-xs uppercase tracking-wide text-[#a9977c] mb-1; }
+
+.card { @apply parchment-panel p-4; }
+.chip { @apply inline-flex items-center rounded-full border border-[#3a2f24] bg-[#1b1613] px-2 py-0.5 text-xs; }
+
+table.sheet { @apply w-full text-sm; }
+table.sheet th { @apply text-left text-[#a9977c] font-normal px-2 py-1; }
+table.sheet td { @apply px-2 py-1 border-t border-[#241d17]; }
+
+/* Battle grid */
+.grid-overlay {
+  background-image: linear-gradient(rgba(255,255,255,.12) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255,255,255,.12) 1px, transparent 1px);
+}

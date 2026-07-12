@@ -1,0 +1,468 @@
+// D&D 5e Campaign Manager — data model
+// See docs/02-DATA-MODEL.md. SQLite has no enums -> String with documented values.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// ============================================================
+// Users & Auth
+// ============================================================
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  displayName  String
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  campaignsOwned Campaign[]       @relation("DM")
+  memberships    CampaignMember[]
+  characters     Character[]
+  sessions       Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+// ============================================================
+// Campaigns
+// ============================================================
+model Campaign {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  dmId        String
+  dm          User     @relation("DM", fields: [dmId], references: [id])
+  partyGoldCp Int      @default(0) // party purse stored in copper
+  xpMode      String   @default("xp") // "xp" | "milestone"
+  inviteCode  String   @unique
+  createdAt   DateTime @default(now())
+
+  members    CampaignMember[]
+  characters Character[]
+  encounters Encounter[]
+  maps       GameMap[]
+  loot       LootItem[]
+  notes      CampaignNote[]
+}
+
+model CampaignMember {
+  id         String   @id @default(cuid())
+  campaignId String
+  userId     String
+  role       String   @default("PLAYER") // DM | PLAYER | VIEWER
+  createdAt  DateTime @default(now())
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, userId])
+}
+
+model CampaignNote {
+  id         String   @id @default(cuid())
+  campaignId String
+  title      String
+  body       String   @default("")
+  dmOnly     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================
+// Characters
+// ============================================================
+model Character {
+  id          String  @id @default(cuid())
+  ownerId     String
+  campaignId  String?
+  name        String
+  avatarUrl   String?
+
+  // identity
+  raceId      String
+  subrace     String?
+  background  String?
+  alignment   String?
+  inspiration Boolean @default(false)
+
+  // ability scores (source of truth, final base incl. racial)
+  str Int @default(10)
+  dex Int @default(10)
+  con Int @default(10)
+  int Int @default(10)
+  wis Int @default(10)
+  cha Int @default(10)
+
+  // progression
+  xp Int @default(0)
+
+  // hit points
+  maxHpBonus   Int @default(0)
+  currentHp    Int @default(0)
+  tempHp       Int @default(0)
+  hitDiceUsed  Int @default(0)
+  deathSuccess Int @default(0)
+  deathFail    Int @default(0)
+
+  // combat state
+  exhaustion    Int     @default(0)
+  conditions    String  @default("[]") // JSON string[]
+  concentration String? // spell name
+
+  // manual overrides
+  acOverride    Int?
+  speedOverride Int?
+
+  // currency (copper base)
+  cp Int @default(0)
+  sp Int @default(0)
+  ep Int @default(0)
+  gp Int @default(0)
+  pp Int @default(0)
+
+  // roleplay
+  personality String?
+  ideals      String?
+  bonds       String?
+  flaws       String?
+  backstory   String?
+  notes       String?
+
+  // json blobs
+  proficienciesJson String @default("{}") // {languages,tools,weapons,armor,skillChoices}
+  featuresJson      String @default("[]") // feats & custom features
+  spellcastingJson  String @default("{}") // {slotsUsed:{1:0,...}, pactSlotsUsed, ...}
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner     User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  campaign  Campaign?           @relation(fields: [campaignId], references: [id])
+  classes   CharacterClass[]
+  items     InventoryItem[]
+  spells    CharacterSpell[]
+  skills    CharacterSkill[]
+  resources CharacterResource[]
+  tokens    Token[]
+}
+
+model CharacterClass {
+  id          String    @id @default(cuid())
+  characterId String
+  classId     String
+  subclass    String?
+  level       Int       @default(1)
+  isPrimary   Boolean   @default(false)
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+}
+
+model CharacterSkill {
+  id          String    @id @default(cuid())
+  characterId String
+  skill       String
+  proficient  Boolean   @default(false)
+  expertise   Boolean   @default(false)
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([characterId, skill])
+}
+
+model CharacterSpell {
+  id             String    @id @default(cuid())
+  characterId    String
+  spellId        String
+  prepared       Boolean   @default(false)
+  alwaysPrepared Boolean   @default(false)
+  source         String?
+  character      Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([characterId, spellId])
+}
+
+model CharacterResource {
+  id          String    @id @default(cuid())
+  characterId String
+  name        String
+  max         Int       @default(0)
+  used        Int       @default(0)
+  resetOn     String    @default("LONG") // SHORT | LONG
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================
+// Inventory & Loot
+// ============================================================
+model InventoryItem {
+  id             String    @id @default(cuid())
+  characterId    String
+  srcEquipmentId String?
+  srcMagicItemId String?
+  name           String
+  quantity       Int       @default(1)
+  equipped       Boolean   @default(false)
+  attuned        Boolean   @default(false)
+  customJson     String?
+  character      Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+}
+
+model LootItem {
+  id             String   @id @default(cuid())
+  campaignId     String
+  name           String
+  quantity       Int      @default(1)
+  srcMagicItemId String?
+  srcEquipmentId String?
+  goldValueCp    Int      @default(0)
+  campaign       Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================
+// Maps & Combat
+// ============================================================
+model GameMap {
+  id         String      @id @default(cuid())
+  campaignId String
+  name       String
+  imageUrl   String
+  gridSize   Int         @default(70)
+  gridCols   Int         @default(20)
+  gridRows   Int         @default(20)
+  offsetX    Int         @default(0)
+  offsetY    Int         @default(0)
+  campaign   Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  encounters Encounter[]
+}
+
+model Encounter {
+  id         String      @id @default(cuid())
+  campaignId String
+  mapId      String?
+  name       String
+  status     String      @default("PLANNING") // PLANNING | ACTIVE | ENDED
+  round      Int         @default(0)
+  turnIndex  Int         @default(0)
+  createdAt  DateTime    @default(now())
+  campaign   Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  map        GameMap?    @relation(fields: [mapId], references: [id])
+  combatants Combatant[]
+  tokens     Token[]
+  log        CombatLog[]
+}
+
+model Combatant {
+  id            String     @id @default(cuid())
+  encounterId   String
+  kind          String     // player | monster | npc
+  characterId   String?
+  monsterId     String?
+  name          String
+  initiative    Int        @default(0)
+  maxHp         Int        @default(1)
+  currentHp     Int        @default(1)
+  tempHp        Int        @default(0)
+  ac            Int        @default(10)
+  conditions    String     @default("[]")
+  statBlockJson String?
+  isVisible     Boolean    @default(true)
+  sortOrder     Int        @default(0)
+  encounter     Encounter  @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  token         Token?
+}
+
+model Token {
+  id          String     @id @default(cuid())
+  encounterId String
+  combatantId String?    @unique
+  characterId String?
+  label       String
+  color       String     @default("#7b1e1e")
+  imageUrl    String?
+  gridX       Int        @default(0)
+  gridY       Int        @default(0)
+  sizeSquares Int        @default(1)
+  encounter   Encounter  @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  combatant   Combatant? @relation(fields: [combatantId], references: [id], onDelete: Cascade)
+  character   Character? @relation(fields: [characterId], references: [id])
+}
+
+model CombatLog {
+  id          String    @id @default(cuid())
+  encounterId String
+  ts          DateTime  @default(now())
+  actor       String    @default("")
+  message     String
+  detailJson  String?
+  encounter   Encounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================
+// SRD reference data (read-only, seeded from data/srd/srd.sqlite)
+// ============================================================
+model SrdMonster {
+  id                  Int     @id
+  name                String
+  size                String?
+  type                String?
+  subtype             String?
+  alignment           String?
+  ac                  Int?
+  acType              String?
+  hp                  Int?
+  hitDice             String?
+  speed               String?
+  str                 Int?
+  dex                 Int?
+  con                 Int?
+  int                 Int?
+  wis                 Int?
+  cha                 Int?
+  cr                  String?
+  xp                  Int?
+  senses              String?
+  languages           String?
+  traits              String?
+  actions             String?
+  legendaryActions    String?
+  reactions           String?
+  resistances         String?
+  immunities          String?
+  vulnerabilities     String?
+  conditionImmunities String?
+  savingThrows        String?
+  skills              String?
+  proficiencyBonus    Int?
+
+  @@index([name])
+  @@index([cr])
+}
+
+model SrdSpell {
+  id                  Int      @id
+  name                String
+  level               Int
+  school              String?
+  castingTime         String?
+  range               String?
+  duration            String?
+  concentration       Boolean  @default(false)
+  ritual              Boolean  @default(false)
+  componentsV         Boolean  @default(false)
+  componentsS         Boolean  @default(false)
+  componentsM         Boolean  @default(false)
+  materialDescription String?
+  classes             String?
+  description         String?
+  higherLevel         String?
+  damageType          String?
+  saveType            String?
+
+  @@index([name])
+  @@index([level])
+}
+
+model SrdEquipment {
+  id                 Int     @id
+  name               String
+  category           String?
+  costGp             Float?
+  costUnit           String?
+  weight             Float?
+  description        String?
+  weaponProperties   String?
+  damageDice         String?
+  damageType         String?
+  weaponRange        String?
+  rangeNormal        Int?
+  rangeLong          Int?
+  armorCategory      String?
+  acBase             Int?
+  acDexBonus         Boolean?
+  acMaxBonus         Int?
+  stealthDisadvantage Boolean?
+  strMinimum         Int?
+
+  @@index([name])
+  @@index([category])
+}
+
+model SrdMagicItem {
+  id                    Int     @id
+  name                  String
+  rarity                String?
+  type                  String?
+  requiresAttunement    Boolean @default(false)
+  attunementDescription String?
+  description           String?
+
+  @@index([name])
+}
+
+model SrdClass {
+  id                  Int     @id
+  name                String
+  hitDie              Int?
+  savingThrows        String?
+  proficiencies       String?
+  spellcastingAbility String?
+  features            String?
+  subclasses          String?
+
+  @@index([name])
+}
+
+model SrdRace {
+  id             Int     @id
+  name           String
+  speed          Int?
+  size           String?
+  abilityBonuses String?
+  traits         String?
+  languages      String?
+  subraces       String?
+
+  @@index([name])
+}
+
+model SrdCondition {
+  id          Int    @id
+  name        String
+  description String?
+}
+
+model SrdRule {
+  id          Int     @id
+  name        String
+  section     String?
+  description String?
+}
+
+model SrdRollableTable {
+  id          Int     @id
+  name        String
+  category    String?
+  description String?
+  dieType     String?
+  entries     String?
+}
+
+model SrdBackground {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  skills      String? // JSON string[]
+  tools       String?
+  languages   String?
+  featureName String?
+  featureDesc String?
+  startGp     Int     @default(0)
+  equipment   String?
+}
