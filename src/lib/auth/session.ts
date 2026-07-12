@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 
@@ -14,7 +15,9 @@ export async function verifyPassword(pw: string, hash: string) {
 
 export async function createSession(userId: string) {
   const expiresAt = new Date(Date.now() + MAX_AGE * 1000);
-  const session = await prisma.session.create({ data: { userId, expiresAt } });
+  // High-entropy, cryptographically-random session token (not a predictable cuid).
+  const id = randomBytes(32).toString("base64url");
+  const session = await prisma.session.create({ data: { id, userId, expiresAt } });
   const store = await cookies();
   store.set(COOKIE, session.id, {
     httpOnly: true, sameSite: "lax", path: "/",

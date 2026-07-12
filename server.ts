@@ -17,9 +17,17 @@ function parseSessionCookie(cookieHeader?: string): string | null {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
+// In production, only allow the app's own origin(s) to open a credentialed socket.
+// Set ALLOWED_ORIGIN (comma-separated) in prod, e.g. "https://yourdomain.com".
+const allowedOrigin: string[] | boolean = dev
+  ? true
+  : (process.env.ALLOWED_ORIGIN
+      ? process.env.ALLOWED_ORIGIN.split(",").map((s) => s.trim()).filter(Boolean)
+      : false);
+
 app.prepare().then(() => {
   const server = createServer((req, res) => handle(req, res));
-  const io = new IOServer(server, { cors: { origin: true, credentials: true } });
+  const io = new IOServer(server, { cors: { origin: allowedOrigin, credentials: true } });
 
   // expose io to API route handlers via global
   (globalThis as any).__io = io;
@@ -52,12 +60,21 @@ app.prepare().then(() => {
 
     // clients ask to (un)watch a specific encounter room
     socket.on("watch:encounter", async (encounterId: string) => {
-      if (typeof encounterId !== "string") return;
+      if (typeof encounterId !== "string" || !userId) return;
       const enc = await prisma.encounter.findUnique({ where: { id: encounterId } });
       if (!enc) return;
-      const isDm = userId
-        ? (await prisma.campaign.findUnique({ where: { id: enc.campaignId } }))?.dmId === userId
-        : false;
+      // Authorization: only members of the encounter's campaign may watch it.
+      const campaign = await prisma.campaign.findUnique({ where: { id: enc.campaignId } });
+      if (!campaign) return;
+      const isDm = campaign.dmId === userId;
+      let isMember = isDm;
+      if (!isMember) {
+        const m = await prisma.campaignMember.findUnique({
+          where: { campaignId_userId: { campaignId: enc.campaignId, userId } },
+        });
+        isMember = !!m;
+      }
+      if (!isMember) return; // not in this campaign -> denied
       socket.join(`encounter:${encounterId}`);
       if (isDm) socket.join(`encounter:${encounterId}:dm`);
     });

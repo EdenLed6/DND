@@ -52,7 +52,7 @@ export default function LoginPage() {
           </div>
           <div>
             <label className="label">Password</label>
-            <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+            <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={mode === "register" ? 8 : undefined} />
           </div>
           {error && <p className="text-sm text-red-400">{error}</p>}
           <button className="btn-primary w-full" disabled={busy}>
