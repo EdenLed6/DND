@@ -5,6 +5,15 @@ import { subclassFeaturesUpTo } from "@/lib/dnd/subclass-features";
 
 export interface FeatureGroup { source: string; items: { level?: number; name: string; description: string }[]; }
 
+export interface EquippedWeapon {
+  name: string;
+  damageDice: string;   // e.g. "1d8"
+  damageType: string;   // e.g. "slashing"
+  finesse: boolean;
+  ranged: boolean;
+  properties: string;
+}
+
 /** All features a character has: race, class (by level), subclass (by level), feats, background. */
 async function resolveFeatures(character: any): Promise<FeatureGroup[]> {
   const groups: FeatureGroup[] = [];
@@ -57,19 +66,35 @@ export async function loadCharacterView(id: string) {
   });
   if (!character) return null;
 
-  // resolve equipped armor/shield from SRD equipment
-  const equippedArmorItems = character.items.filter((i) => i.equipped && i.srcEquipmentId);
+  // resolve equipped armor/shield/weapons from SRD equipment
+  const equippedItems = character.items.filter((i) => i.equipped && i.srcEquipmentId);
   let equippedArmor: ArmorInput | null = null;
   let equippedShield = false;
-  if (equippedArmorItems.length) {
+  const weapons: EquippedWeapon[] = [];
+  if (equippedItems.length) {
     const srdEquip = await prisma.srdEquipment.findMany({
-      where: { id: { in: equippedArmorItems.map((i) => Number(i.srcEquipmentId)).filter((n) => !isNaN(n)) } },
+      where: { id: { in: equippedItems.map((i) => Number(i.srcEquipmentId)).filter((n) => !isNaN(n)) } },
     });
+    const byEquipId = new Map(srdEquip.map((e) => [e.id, e]));
     for (const e of srdEquip) {
       if (e.armorCategory && /shield/i.test(e.name)) equippedShield = true;
       else if (e.armorCategory && e.acBase != null) {
         equippedArmor = { armorCategory: e.armorCategory, acBase: e.acBase, acMaxBonus: e.acMaxBonus };
       }
+    }
+    // Build the attack list from equipped weapons (items with damage dice).
+    for (const item of equippedItems) {
+      const e = byEquipId.get(Number(item.srcEquipmentId));
+      if (!e || !e.damageDice) continue;
+      const props = (e.weaponProperties ?? "").toLowerCase();
+      weapons.push({
+        name: item.name,
+        damageDice: e.damageDice,
+        damageType: e.damageType ?? "",
+        finesse: /finesse/.test(props),
+        ranged: /ranged/i.test(e.category ?? "") || /ammunition|thrown/.test(props) || e.rangeNormal != null,
+        properties: e.weaponProperties ?? "",
+      });
     }
   }
 
@@ -118,7 +143,7 @@ export async function loadCharacterView(id: string) {
   }
 
   const features = await resolveFeatures(character);
-  return { character, derived: derive(input), spellDetails, features };
+  return { character, derived: derive(input), spellDetails, features, weapons };
 }
 
 function safeJson<T>(s: string | null | undefined, fallback: T): T {

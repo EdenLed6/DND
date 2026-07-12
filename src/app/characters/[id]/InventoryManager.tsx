@@ -2,9 +2,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function InventoryManager({ characterId, items, canEdit, carryCapacity }: {
-  characterId: string; items: any[]; canEdit: boolean; carryCapacity: number;
+export function InventoryManager({ characterId, items, canEdit, canUse, carryCapacity }: {
+  characterId: string; items: any[]; canEdit: boolean; canUse?: boolean; carryCapacity: number;
 }) {
+  // canEdit  → definition edits (add / remove / attune / quantity), gated by Edit mode.
+  // canUse   → gameplay (equip toggle), available in Play mode. Defaults to canEdit.
+  const canEquip = canUse ?? canEdit;
   const router = useRouter();
   const [showAdd, setShowAdd] = useState(false);
 
@@ -31,13 +34,13 @@ export function InventoryManager({ characterId, items, canEdit, carryCapacity }:
             <li key={it.id} className="flex items-center justify-between gap-2 border-t border-[#241d17] py-1">
               <span className="flex-1">{it.equipped ? "🛡 " : ""}{it.name}{it.quantity > 1 ? ` ×${it.quantity}` : ""}
                 {it.attuned && <span className="ml-1 text-xs text-arcane">attuned</span>}</span>
-              {canEdit && (
+              {(canEquip || canEdit) && (
                 <span className="flex items-center gap-1 text-xs">
-                  <button className={it.equipped ? "chip bg-gold text-black" : "chip"} onClick={() => patchItem(it.id, { equipped: !it.equipped })}>equip</button>
-                  <button className={it.attuned ? "chip bg-arcane text-white" : "chip"} onClick={() => patchItem(it.id, { attuned: !it.attuned })}>attune</button>
-                  <button className="chip" onClick={() => patchItem(it.id, { quantity: it.quantity + 1 })}>+</button>
-                  <button className="chip" onClick={() => it.quantity > 1 && patchItem(it.id, { quantity: it.quantity - 1 })}>−</button>
-                  <button className="chip" onClick={() => removeItem(it.id)}>🗑</button>
+                  {canEquip && <button className={it.equipped ? "chip bg-gold text-black" : "chip"} onClick={() => patchItem(it.id, { equipped: !it.equipped })}>equip</button>}
+                  {canEdit && <button className={it.attuned ? "chip bg-arcane text-white" : "chip"} onClick={() => patchItem(it.id, { attuned: !it.attuned })}>attune</button>}
+                  {canEdit && <button className="chip" onClick={() => patchItem(it.id, { quantity: it.quantity + 1 })}>+</button>}
+                  {canEdit && <button className="chip" onClick={() => it.quantity > 1 && patchItem(it.id, { quantity: it.quantity - 1 })}>−</button>}
+                  {canEdit && <button className="chip" onClick={() => removeItem(it.id)}>🗑</button>}
                 </span>
               )}
             </li>

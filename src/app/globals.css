@@ -189,3 +189,85 @@ table.sheet td { padding: .3rem .5rem; border-top: 1px solid var(--line-soft); }
 .link-gold { color: var(--gold-bright); }
 .link-gold:hover { text-decoration: underline; }
 .scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* Click-to-roll affordance on the character sheet */
+.rollable { cursor: pointer; transition: background .1s ease, border-color .1s ease; }
+.rollable:hover { border-color: var(--gold) !important; background: rgba(201,162,39,.07); }
+
+/* ============================================================
+   Dice tray + roll log (D&D Beyond-style)
+   ============================================================ */
+.dice-tray {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
+  background: linear-gradient(180deg, rgba(24,19,15,.97), rgba(18,15,13,.99));
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -12px 30px rgba(0,0,0,.5);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.dice-tray-handle {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; max-width: 1152px; margin: 0 auto;
+  padding: 5px 16px; cursor: pointer; user-select: none;
+  border: none; background: transparent; color: inherit;
+  border-bottom: 1px solid var(--line-soft);
+}
+.dice-tray-title { font-size: 12px; font-weight: 600; color: var(--gold); letter-spacing: .04em; }
+.dice-tray.is-collapsed .dice-tray-inner,
+.dice-tray.is-collapsed .dice-tray-quick { display: none; }
+
+.dice-tray-inner {
+  max-width: 1152px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr 300px;
+}
+@media (max-width: 720px) {
+  .dice-tray-inner { grid-template-columns: 1fr; }
+  .dice-tray-log { display: none; }
+}
+.dice-tray-main { display: flex; align-items: center; gap: 16px; min-height: 108px; padding: 12px 16px; }
+.dice-tray-dice { display: flex; gap: 10px; align-items: center; min-width: 110px; flex-wrap: wrap; }
+.dice-tray-info { flex: 1; min-width: 0; }
+.dice-tray-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-faint); }
+.dice-tray-total { font-family: "Iowan Old Style", Palatino, Georgia, serif; font-size: 42px; line-height: 1; color: var(--gold-bright); }
+.dice-tray-verdict { font-weight: 700; margin-left: 8px; }
+.dice-tray-bd { font-size: 12.5px; color: var(--ink-dim); margin-top: 2px; word-break: break-word; }
+
+.dice-tray-log { border-left: 1px solid var(--line); padding: 8px 12px; max-height: 156px; overflow: auto; }
+.dice-tray-log-head { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-faint); margin-bottom: 5px; position: sticky; top: 0; background: transparent; }
+.dice-log-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; padding: 3px 0; border-bottom: 1px solid var(--line-soft); }
+.dice-log-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dice-log-total { font-variant-numeric: tabular-nums; color: var(--gold-bright); white-space: nowrap; }
+.dice-log-verdict { font-size: 10px; color: var(--ink-faint); margin-left: 4px; }
+
+.dice-tray-quick { display: flex; gap: 6px; padding: 0 16px 12px; flex-wrap: wrap; align-items: center; max-width: 1152px; margin: 0 auto; }
+.dice-quick-btn { min-height: 30px !important; padding: 3px 10px !important; font-size: 12px !important; border-radius: 7px !important; }
+.dice-quick-input { width: 90px !important; min-height: 30px !important; padding: 4px 8px !important; font-size: 13px !important; }
+
+/* Individual dice */
+.die {
+  width: 46px; height: 46px; display: flex; align-items: center; justify-content: center;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-weight: 800; font-size: 17px; color: #241a06; position: relative;
+  background: radial-gradient(circle at 40% 30%, #f4dd8a, #c9a227 70%, #a07d12);
+  border: 1px solid #8a6d14; filter: drop-shadow(0 3px 5px rgba(0,0,0,.5));
+}
+.die-s6 { border-radius: 9px; }
+.die-crit { background: radial-gradient(circle at 40% 30%, #bff0c8, #4f9d62 70%, #2f6b40); color: #08240f; box-shadow: 0 0 14px rgba(79,157,98,.6); }
+.die-fumble { background: radial-gradient(circle at 40% 30%, #f0b9b9, #c23636 70%, #7d1e1e); color: #2a0808; box-shadow: 0 0 12px rgba(194,54,54,.5); }
+@keyframes die-tumble {
+  0% { transform: rotate(0) translateY(0) scale(.9); }
+  20% { transform: rotate(160deg) translateY(-12px) scale(1.05); }
+  40% { transform: rotate(300deg) translateY(0); }
+  60% { transform: rotate(470deg) translateY(-7px); }
+  80% { transform: rotate(620deg) translateY(0); }
+  100% { transform: rotate(720deg) translateY(0) scale(1); }
+}
+@keyframes die-land { 0% { transform: scale(1.25); } 60% { transform: scale(.94); } 100% { transform: scale(1); } }
+.die-rolling { animation: die-tumble .62s cubic-bezier(.3,.7,.4,1); }
+.die-landed { animation: die-land .28s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .die-rolling, .die-landed { animation: none; }
+}
+
+/* Keep sheet content clear of the fixed tray */
+.has-dice-tray { padding-bottom: 220px; }
+@media (max-width: 720px) { .has-dice-tray { padding-bottom: 160px; } }

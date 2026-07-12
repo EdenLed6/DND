@@ -2,9 +2,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function SpellManager({ characterId, spells, casterClass, canEdit }: {
-  characterId: string; spells: any[]; casterClass: string; canEdit: boolean;
+export function SpellManager({ characterId, spells, casterClass, canEdit, canUse }: {
+  characterId: string; spells: any[]; casterClass: string; canEdit: boolean; canUse?: boolean;
 }) {
+  // canEdit → add / remove spells (definition), gated by Edit mode.
+  // canUse  → prepare/unprepare spells (gameplay), available in Play mode.
+  const canPrepare = canUse ?? canEdit;
   const router = useRouter();
   const [showAdd, setShowAdd] = useState(false);
 
@@ -36,7 +39,7 @@ export function SpellManager({ characterId, spells, casterClass, canEdit }: {
           {byLevel.get(lvl)!.map((s) => (
             <div key={s.id} className="flex items-center justify-between gap-1 text-sm">
               <span className="flex items-center gap-1">
-                {lvl > 0 && canEdit && (
+                {lvl > 0 && canPrepare && (
                   <button title="prepared" onClick={() => togglePrepared(s.id, !s.prepared)}
                     className={`h-3 w-3 rounded-sm border ${s.prepared ? "bg-gold border-gold" : "border-[#3a2f24]"}`} />
                 )}

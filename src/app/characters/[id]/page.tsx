@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { loadCharacterView } from "@/lib/character-view";
 import { roleInCampaign } from "@/lib/auth/rbac";
 import { TopNav } from "@/components/TopNav";
+import { DiceTray } from "@/components/DiceTray";
 import { CharacterSheet } from "./CharacterSheet";
 
 export default async function CharacterPage({ params }: { params: Promise<{ id: string }> }) {
@@ -20,16 +21,18 @@ export default async function CharacterPage({ params }: { params: Promise<{ id: 
   const canEdit = isOwner || isDM;
 
   return (
-    <div>
+    <div className="has-dice-tray">
       <TopNav user={user} />
       <CharacterSheet
         initialCharacter={serialize(view.character)}
         derived={view.derived}
         spellDetails={serialize(view.spellDetails ?? [])}
         features={serialize(view.features ?? [])}
+        weapons={view.weapons ?? []}
         canEdit={canEdit}
         isDM={isDM}
       />
+      <DiceTray />
     </div>
   );
 }
