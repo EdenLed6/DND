@@ -36,12 +36,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (op === "moveToken") {
     const token = await prisma.token.findUnique({ where: { id: body.tokenId }, include: { character: true } });
     if (!token || token.encounterId !== id) return bad("Bad token");
-    if (!dm && token.character?.ownerId !== user.id) return bad("לא הטוקן שלך", 403);
+    if (!dm && token.character?.ownerId !== user.id) return bad("Not your token", 403);
     const t = await combat.moveToken(id, body.tokenId, body.gridX, body.gridY);
     return NextResponse.json(t);
   }
 
-  if (!dm) return bad("רק ה-DM", 403);
+  if (!dm) return bad("DM only", 403);
 
   try {
     switch (op) {
@@ -51,6 +51,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       case "turn": await combat.turn(id, body.dir); break;
       case "updateCombatant": await combat.updateCombatant(id, body.combatantId, body.patch ?? {}); break;
       case "removeCombatant": await combat.removeCombatant(id, body.combatantId); break;
+      case "updateToken": await combat.updateToken(id, body.tokenId, body.patch ?? {}); break;
       case "setFog": await combat.setFog(id, !!body.enabled); break;
       case "revealCells": await combat.revealCells(id, body.cells ?? [], body.reveal !== false); break;
       case "setAllCells": await combat.setAllCells(id, !!body.revealAll); break;

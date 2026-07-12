@@ -15,10 +15,10 @@ export async function POST(req: Request) {
   const { user, res } = await requireUser();
   if (!user) return res!;
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return bad("קובץ לא תקין");
+  if (!parsed.success) return bad("Invalid file");
   const c = parsed.data.character;
   const campaignId = parsed.data.campaignId || null;
-  if (campaignId && !(await roleInCampaign(user.id, campaignId))) return bad("אינך חבר בקמפיין", 403);
+  if (campaignId && !(await roleInCampaign(user.id, campaignId))) return bad("You are not a member of this campaign", 403);
 
   const created = await prisma.character.create({
     data: {

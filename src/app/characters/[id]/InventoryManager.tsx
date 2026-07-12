@@ -22,10 +22,10 @@ export function InventoryManager({ characterId, items, canEdit, carryCapacity }:
   return (
     <div className="card">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="font-display text-gold">ציוד</h3>
-        {canEdit && <button className="btn-ghost !py-0.5" onClick={() => setShowAdd(true)}>+ הוסף</button>}
+        <h3 className="font-display text-gold">Equipment</h3>
+        {canEdit && <button className="btn-ghost !py-0.5" onClick={() => setShowAdd(true)}>+ Add</button>}
       </div>
-      {items.length === 0 ? <p className="text-sm text-[#a9977c]">ריק.</p> : (
+      {items.length === 0 ? <p className="text-sm text-[#a9977c]">Empty.</p> : (
         <ul className="text-sm">
           {items.map((it) => (
             <li key={it.id} className="flex items-center justify-between gap-2 border-t border-[#241d17] py-1">
@@ -82,16 +82,16 @@ function AddItemModal({ characterId, onClose }: { characterId: string; onClose: 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div className="card w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-lg text-gold">הוסף פריט</h3>
-          <button className="btn-ghost !py-0.5" onClick={onClose}>סגור</button>
+          <h3 className="font-display text-lg text-gold">Add Item</h3>
+          <button className="btn-ghost !py-0.5" onClick={onClose}>Close</button>
         </div>
         <div className="mb-2 flex gap-2">
-          <button className={type === "equipment" ? "btn-gold" : "btn-ghost"} onClick={() => setType("equipment")}>ציוד</button>
-          <button className={type === "magic" ? "btn-gold" : "btn-ghost"} onClick={() => setType("magic")}>פריטי קסם</button>
+          <button className={type === "equipment" ? "btn-gold" : "btn-ghost"} onClick={() => setType("equipment")}>Equipment</button>
+          <button className={type === "magic" ? "btn-gold" : "btn-ghost"} onClick={() => setType("magic")}>Magic Items</button>
         </div>
         <div className="mb-2 flex gap-1">
-          <input className="input" placeholder="חיפוש..." value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} />
-          <button className="btn-ghost" onClick={search}>חפש</button>
+          <input className="input" placeholder="Search..." value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} />
+          <button className="btn-ghost" onClick={search}>Search</button>
         </div>
         <div className="max-h-64 space-y-1 overflow-y-auto text-sm">
           {rows.map((r) => (
@@ -100,13 +100,13 @@ function AddItemModal({ characterId, onClose }: { characterId: string; onClose: 
                 {r.kind === "magic" ? `${r.rarity ?? ""}${r.requiresAttunement ? " · attune" : ""}` :
                   `${r.category ?? ""}${r.damageDice ? ` · ${r.damageDice} ${r.damageType}` : ""}${r.costGp ? ` · ${r.costGp}${r.costUnit}` : ""}`}
               </span></span>
-              <button className="btn-ghost !py-0.5" onClick={() => add(r)}>+ הוסף</button>
+              <button className="btn-ghost !py-0.5" onClick={() => add(r)}>+ Add</button>
             </div>
           ))}
         </div>
         <div className="mt-3 flex gap-1 border-t border-[#241d17] pt-2">
-          <input className="input" placeholder="פריט מותאם (הומברו)..." value={custom} onChange={(e) => setCustom(e.target.value)} />
-          <button className="btn-gold" onClick={addCustom}>הוסף</button>
+          <input className="input" placeholder="Custom item (homebrew)..." value={custom} onChange={(e) => setCustom(e.target.value)} />
+          <button className="btn-gold" onClick={addCustom}>Add</button>
         </div>
       </div>
     </div>

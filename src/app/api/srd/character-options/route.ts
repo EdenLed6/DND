@@ -25,6 +25,7 @@ export async function GET() {
       savingThrows: JSON.parse(c.savingThrows ?? "[]"),
       proficiencies: JSON.parse(c.proficiencies ?? "{}"),
       spellcastingAbility: c.spellcastingAbility,
+      subclasses: JSON.parse(c.subclasses ?? "[]"),
     })),
     backgrounds: backgrounds.map((b) => ({
       id: b.id, name: b.name, skills: JSON.parse(b.skills ?? "[]"),

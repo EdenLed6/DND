@@ -189,3 +189,20 @@ export const ASI_LEVELS: Record<string, number[]> = {
 export function asiLevels(className: string): number[] {
   return ASI_LEVELS[className] ?? ASI_LEVELS._default;
 }
+
+// ---- Level at which each class chooses its subclass ----
+export const SUBCLASS_LEVEL: Record<string, number> = {
+  Cleric: 1, Sorcerer: 1, Warlock: 1,
+  Bard: 3, Barbarian: 3, Fighter: 3, Monk: 3, Paladin: 3, Ranger: 3, Rogue: 3, Wizard: 2, Druid: 2,
+};
+export function subclassLevel(className: string): number {
+  return SUBCLASS_LEVEL[className] ?? 3;
+}
+
+// ---- Multiclass ability prerequisites (SRD) ----
+export const MULTICLASS_PREREQ: Record<string, Partial<Record<Ability, number>>> = {
+  Barbarian: { str: 13 }, Bard: { cha: 13 }, Cleric: { wis: 13 }, Druid: { wis: 13 },
+  Fighter: { str: 13 }, Monk: { dex: 13, wis: 13 }, Paladin: { str: 13, cha: 13 },
+  Ranger: { dex: 13, wis: 13 }, Rogue: { dex: 13 }, Sorcerer: { cha: 13 },
+  Warlock: { cha: 13 }, Wizard: { int: 13 },
+};

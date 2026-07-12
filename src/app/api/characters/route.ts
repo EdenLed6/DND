@@ -31,7 +31,7 @@ export async function POST(req: Request) {
 
   if (d.campaignId) {
     const role = await roleInCampaign(user.id, d.campaignId);
-    if (!role) return bad("אינך חבר בקמפיין הזה", 403);
+    if (!role) return bad("You are not a member of this campaign", 403);
   }
 
   const saveProfs = d.savingThrows.map((s) => s.toLowerCase()).filter((s) => ["str", "dex", "con", "int", "wis", "cha"].includes(s)) as Ability[];

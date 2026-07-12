@@ -7,6 +7,7 @@ import type { DerivedCharacter } from "@/lib/dnd/character";
 import { useRealtime } from "@/lib/realtime/useRealtime";
 import { InventoryManager } from "./InventoryManager";
 import { SpellManager } from "./SpellManager";
+import { LevelUpWizard } from "./LevelUpWizard";
 
 const CONDITIONS = ["Blinded","Charmed","Deafened","Frightened","Grappled","Incapacitated","Invisible","Paralyzed","Petrified","Poisoned","Prone","Restrained","Stunned","Unconscious"];
 
@@ -45,6 +46,7 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, canEdi
   }
 
   const [dmg, setDmg] = useState("");
+  const [showLevelUp, setShowLevelUp] = useState(false);
 
   return (
     <main className="mx-auto max-w-6xl space-y-4 p-4">
@@ -58,19 +60,29 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, canEdi
         </div>
         <div className="flex items-center gap-4">
           <div className="text-center">
-            <div className="text-xs text-[#a9977c]">רמה</div>
+            <div className="text-xs text-[#a9977c]">Level</div>
             <div className="font-display text-2xl text-gold">{derived.totalLevel}</div>
           </div>
           <div className="min-w-[160px]">
             <div className="flex justify-between text-xs text-[#a9977c]"><span>XP</span><span>{c.xp}{xpInfo.next ? ` / ${xpInfo.next}` : ""}</span></div>
             <div className="mt-1 h-2 rounded bg-[#0f0c0a]"><div className="h-2 rounded bg-gold" style={{ width: `${xpInfo.pct}%` }} /></div>
-            {canLevelUp && <div className="mt-1 text-xs text-green-400">⬆ עליית רמה זמינה (L{levelForXp(c.xp)})</div>}
+            {canLevelUp && <div className="mt-1 text-xs text-green-400">⬆ Level up available (L{levelForXp(c.xp)})</div>}
           </div>
+          {canEdit && <button onClick={() => setShowLevelUp(true)} className={canLevelUp ? "btn-gold" : "btn-ghost"} title="Level Up">⬆ Level Up</button>}
           <button onClick={() => canEdit && patch({ inspiration: !c.inspiration })}
             className={c.inspiration ? "btn-gold" : "btn-ghost"} title="Inspiration">💡</button>
-          <a href={`/api/characters/${c.id}/export`} className="btn-ghost" title="ייצא JSON" download>⬇</a>
+          <a href={`/api/characters/${c.id}/export`} className="btn-ghost" title="Export JSON" download>⬇</a>
         </div>
       </div>
+
+      {showLevelUp && (
+        <LevelUpWizard
+          characterId={c.id}
+          classes={c.classes.map((cl: any) => ({ classId: cl.classId, level: cl.level, subclass: cl.subclass }))}
+          abilities={{ str: c.str, dex: c.dex, con: c.con, int: c.int, wis: c.wis, cha: c.cha }}
+          onClose={() => setShowLevelUp(false)}
+        />
+      )}
 
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Left column: abilities + saves + skills */}
@@ -89,7 +101,7 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, canEdi
           </div>
 
           <div className="card">
-            <h3 className="mb-2 font-display text-gold">הצלות (Saving Throws)</h3>
+            <h3 className="mb-2 font-display text-gold">Saving Throws</h3>
             <div className="grid grid-cols-2 gap-1 text-sm">
               {ABILITIES.map((a) => (
                 <div key={a} className="flex justify-between px-2 py-1">
@@ -101,7 +113,7 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, canEdi
           </div>
 
           <div className="card">
-            <h3 className="mb-2 font-display text-gold">מיומנויות (Skills)</h3>
+            <h3 className="mb-2 font-display text-gold">Skills</h3>
             <table className="sheet">
               <tbody>
                 {Object.entries(derived.skills).map(([name, s]) => (
@@ -131,7 +143,7 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, canEdi
 
           <div className="card">
             <div className="mb-1 flex items-end justify-between">
-              <h3 className="font-display text-gold">נקודות פגיעה</h3>
+              <h3 className="font-display text-gold">Hit Points</h3>
               <div className="text-sm text-[#a9977c]">Temp: {c.tempHp}</div>
             </div>
             <div className="mb-2 flex items-center justify-center gap-2">
@@ -141,9 +153,9 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, canEdi
             <div className="h-3 rounded bg-[#0f0c0a]"><div className="h-3 rounded bg-blood" style={{ width: `${Math.round((c.currentHp / derived.maxHp) * 100)}%` }} /></div>
             {canEdit && (
               <div className="mt-3 flex gap-2">
-                <input className="input" placeholder="כמות" value={dmg} onChange={(e) => setDmg(e.target.value)} inputMode="numeric" />
-                <button className="btn-primary" onClick={() => { applyHp(-Math.abs(parseInt(dmg) || 0)); setDmg(""); }}>נזק</button>
-                <button className="btn-gold" onClick={() => { applyHp(Math.abs(parseInt(dmg) || 0)); setDmg(""); }}>ריפוי</button>
+                <input className="input" placeholder="Amount" value={dmg} onChange={(e) => setDmg(e.target.value)} inputMode="numeric" />
+                <button className="btn-primary" onClick={() => { applyHp(-Math.abs(parseInt(dmg) || 0)); setDmg(""); }}>Damage</button>
+                <button className="btn-gold" onClick={() => { applyHp(Math.abs(parseInt(dmg) || 0)); setDmg(""); }}>Heal</button>
                 <button className="btn-ghost" onClick={() => patch({ tempHp: Math.abs(parseInt(dmg) || 0) })} title="Temp HP">Temp</button>
               </div>
             )}
@@ -156,15 +168,15 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, canEdi
             </div>
             {canEdit && c.currentHp === 0 && (
               <div className="mt-2 flex gap-2 text-xs">
-                <button className="btn-ghost" onClick={() => patch({ deathSuccess: Math.min(3, c.deathSuccess + 1) })}>+הצלחה</button>
-                <button className="btn-ghost" onClick={() => patch({ deathFail: Math.min(3, c.deathFail + 1) })}>+כישלון</button>
-                <button className="btn-ghost" onClick={() => patch({ deathSuccess: 0, deathFail: 0 })}>איפוס</button>
+                <button className="btn-ghost" onClick={() => patch({ deathSuccess: Math.min(3, c.deathSuccess + 1) })}>+Success</button>
+                <button className="btn-ghost" onClick={() => patch({ deathFail: Math.min(3, c.deathFail + 1) })}>+Failure</button>
+                <button className="btn-ghost" onClick={() => patch({ deathSuccess: 0, deathFail: 0 })}>Reset</button>
               </div>
             )}
           </div>
 
           <div className="card">
-            <h3 className="mb-2 font-display text-gold">מצבים (Conditions)</h3>
+            <h3 className="mb-2 font-display text-gold">Conditions</h3>
             <div className="flex flex-wrap gap-1">
               {CONDITIONS.map((cond) => (
                 <button key={cond} disabled={!canEdit} onClick={() => toggleCondition(cond)}
@@ -186,7 +198,7 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, canEdi
         <div className="space-y-4">
           {derived.spellcasting && (
             <div className="card">
-              <h3 className="mb-2 font-display text-gold">קסמים ({derived.spellcasting.casterClass})</h3>
+              <h3 className="mb-2 font-display text-gold">Spells ({derived.spellcasting.casterClass})</h3>
               <div className="flex gap-2 text-sm">
                 <span className="chip">Save DC {derived.spellcasting.spellSaveDc}</span>
                 <span className="chip">Attack {formatMod(derived.spellcasting.spellAttackBonus)}</span>
@@ -206,7 +218,7 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, canEdi
           )}
 
           <div className="card">
-            <h3 className="mb-2 font-display text-gold">מטבעות</h3>
+            <h3 className="mb-2 font-display text-gold">Currency</h3>
             <div className="grid grid-cols-5 gap-1 text-center text-sm">
               {(["pp","gp","ep","sp","cp"] as const).map((coin) => (
                 <div key={coin} className="stat-box">
@@ -224,7 +236,7 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, canEdi
           <InventoryManager characterId={c.id} items={c.items} canEdit={canEdit} carryCapacity={derived.carryCapacity} />
         </div>
       </div>
-      {isDM && <div className="text-center text-xs text-[#a9977c]">👑 מצב DM — יש לך שליטה מלאה על דמות זו</div>}
+      {isDM && <div className="text-center text-xs text-[#a9977c]">👑 DM Mode — you have full control over this character</div>}
     </main>
   );
 }

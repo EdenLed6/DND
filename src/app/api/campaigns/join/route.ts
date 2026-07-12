@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return bad("Invalid input");
 
   const campaign = await prisma.campaign.findUnique({ where: { inviteCode: parsed.data.code.toUpperCase() } });
-  if (!campaign) return bad("קוד הזמנה לא נמצא", 404);
+  if (!campaign) return bad("Invite code not found", 404);
   if (campaign.dmId === user.id) return NextResponse.json(campaign); // DM already
 
   await prisma.campaignMember.upsert({

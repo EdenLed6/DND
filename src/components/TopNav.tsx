@@ -14,11 +14,11 @@ export function TopNav({ user }: { user: { displayName: string } }) {
         🐉 <span>Campaign Manager</span>
       </Link>
       <nav className="flex items-center gap-3 text-sm">
-        <Link href="/dashboard" className="text-parchment hover:text-gold">לוח בקרה</Link>
-        <Link href="/compendium" className="text-parchment hover:text-gold">קומפנדיום</Link>
+        <Link href="/dashboard" className="text-parchment hover:text-gold">Dashboard</Link>
+        <Link href="/compendium" className="text-parchment hover:text-gold">Compendium</Link>
         <span className="text-[#a9977c]">·</span>
         <span className="text-[#a9977c]">{user.displayName}</span>
-        <button onClick={logout} className="btn-ghost">יציאה</button>
+        <button onClick={logout} className="btn-ghost">Sign Out</button>
       </nav>
     </header>
   );

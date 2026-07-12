@@ -12,7 +12,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { id: campaignId } = await params;
   const { user, res } = await requireUser();
   if (!user) return res!;
-  if (!(await isDM(user.id, campaignId))) return bad("רק ה-DM", 403);
+  if (!(await isDM(user.id, campaignId))) return bad("DM only", 403);
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return bad("Invalid input");
   const preset = findPreset(parsed.data.presetId);

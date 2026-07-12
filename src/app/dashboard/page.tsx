@@ -26,9 +26,9 @@ export default async function Dashboard() {
         <DashboardActions />
 
         <section>
-          <h2 className="mb-3 font-display text-xl text-gold">קמפיינים שאני מנחה (DM)</h2>
+          <h2 className="mb-3 font-display text-xl text-gold">Campaigns I DM</h2>
           {owned.length === 0 ? (
-            <p className="text-sm text-[#a9977c]">עדיין אין. צור קמפיין חדש כדי להתחיל.</p>
+            <p className="text-sm text-[#a9977c]">Nothing yet. Create a new campaign to get started.</p>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {owned.map((c) => (
@@ -36,11 +36,11 @@ export default async function Dashboard() {
                   <div className="font-display text-lg">{c.name}</div>
                   <div className="text-sm text-[#a9977c]">{c.description || "—"}</div>
                   <div className="mt-2 flex gap-2 text-xs">
-                    <span className="chip">👥 {c._count.members} שחקנים</span>
-                    <span className="chip">🎭 {c._count.characters} דמויות</span>
+                    <span className="chip">👥 {c._count.members} players</span>
+                    <span className="chip">🎭 {c._count.characters} characters</span>
                     <span className="chip">DM</span>
                   </div>
-                  <div className="mt-2 text-xs text-[#a9977c]">קוד הזמנה: <code className="text-gold">{c.inviteCode}</code></div>
+                  <div className="mt-2 text-xs text-[#a9977c]">Invite code: <code className="text-gold">{c.inviteCode}</code></div>
                 </Link>
               ))}
             </div>
@@ -48,16 +48,16 @@ export default async function Dashboard() {
         </section>
 
         <section>
-          <h2 className="mb-3 font-display text-xl text-gold">קמפיינים שאני משחק בהם</h2>
+          <h2 className="mb-3 font-display text-xl text-gold">Campaigns I Play In</h2>
           {memberships.length === 0 ? (
-            <p className="text-sm text-[#a9977c]">הצטרף לקמפיין עם קוד הזמנה מה-DM.</p>
+            <p className="text-sm text-[#a9977c]">Join a campaign with an invite code from your DM.</p>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {memberships.map((m) => (
                 <Link key={m.id} href={`/campaigns/${m.campaign.id}`} className="card hover:border-gold">
                   <div className="font-display text-lg">{m.campaign.name}</div>
                   <div className="text-sm text-[#a9977c]">DM: {m.campaign.dm.displayName}</div>
-                  <span className="chip mt-2">{m.role === "PLAYER" ? "שחקן" : "צופה"}</span>
+                  <span className="chip mt-2">{m.role === "PLAYER" ? "Player" : "Spectator"}</span>
                 </Link>
               ))}
             </div>
@@ -65,9 +65,9 @@ export default async function Dashboard() {
         </section>
 
         <section>
-          <h2 className="mb-3 font-display text-xl text-gold">הדמויות שלי</h2>
+          <h2 className="mb-3 font-display text-xl text-gold">My Characters</h2>
           {characters.length === 0 ? (
-            <p className="text-sm text-[#a9977c]">צור דמות חדשה.</p>
+            <p className="text-sm text-[#a9977c]">Create a new character.</p>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {characters.map((ch) => {

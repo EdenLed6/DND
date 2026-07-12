@@ -47,16 +47,16 @@ export function PlayScreen({ encId, campaignId, initialState, campaignChars, map
         <div>
           <h1 className="font-display text-xl text-gold">⚔ {state?.name}</h1>
           <div className="text-sm text-[#a9977c]">
-            סטטוס: {state?.status} {state?.status === "ACTIVE" && `· סבב ${state.round}`}
+            Status: {state?.status} {state?.status === "ACTIVE" && `· Round ${state.round}`}
           </div>
         </div>
         {isDM && (
           <div className="flex flex-wrap gap-2">
-            {state?.status !== "ACTIVE" && <button className="btn-primary" onClick={() => op({ op: "rollInitiative" })}>🎲 גלגל יוזמה והתחל</button>}
+            {state?.status !== "ACTIVE" && <button className="btn-primary" onClick={() => op({ op: "rollInitiative" })}>🎲 Roll Initiative & Start</button>}
             {state?.status === "ACTIVE" && <>
-              <button className="btn-ghost" onClick={() => op({ op: "turn", dir: "prev" })}>◀ קודם</button>
-              <button className="btn-gold" onClick={() => op({ op: "turn", dir: "next" })}>תור הבא ▶</button>
-              <button className="btn-ghost" onClick={() => op({ op: "turn", dir: "end" })}>סיים קרב</button>
+              <button className="btn-ghost" onClick={() => op({ op: "turn", dir: "prev" })}>◀ Previous</button>
+              <button className="btn-gold" onClick={() => op({ op: "turn", dir: "next" })}>Next Turn ▶</button>
+              <button className="btn-ghost" onClick={() => op({ op: "turn", dir: "end" })}>End Combat</button>
             </>}
           </div>
         )}
@@ -83,8 +83,8 @@ export function PlayScreen({ encId, campaignId, initialState, campaignChars, map
       {isDM && (
         <div className="card">
           <div className="mb-2 flex gap-2">
-            <button className={tab === "build" ? "btn-gold" : "btn-ghost"} onClick={() => setTab("build")}>🛠 בניית קרב</button>
-            <button className={tab === "attack" ? "btn-gold" : "btn-ghost"} onClick={() => setTab("attack")}>🗡 תקיפה</button>
+            <button className={tab === "build" ? "btn-gold" : "btn-ghost"} onClick={() => setTab("build")}>🛠 Build Encounter</button>
+            <button className={tab === "attack" ? "btn-gold" : "btn-ghost"} onClick={() => setTab("attack")}>🗡 Attack</button>
           </div>
           {tab === "build"
             ? <Builder op={op} campaignChars={campaignChars} combatants={combatants} />
@@ -104,6 +104,29 @@ function MapBoard({ state, isDM, myCharacterIds, onMove, onSetMap, maps, campaig
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const [brush, setBrush] = useState<"off" | "reveal" | "hide">("off");
   const paintingRef = useRef<{ active: boolean; cells: Set<string> }>({ active: false, cells: new Set() }).current;
+  // measurement + AoE tools
+  const [tool, setTool] = useState<"off" | "ruler" | "aoe">("off");
+  const [aoeShape, setAoeShape] = useState<"circle" | "square" | "cone" | "line">("circle");
+  const [aoeSize, setAoeSize] = useState(20); // feet
+  const [ruler, setRuler] = useState<{ start: [number, number]; end: [number, number] } | null>(null);
+  const [aoeAnchor, setAoeAnchor] = useState<[number, number] | null>(null);
+  const cellsPerFt = 5;
+  const distFt = ruler ? Math.max(Math.abs(ruler.end[0] - ruler.start[0]), Math.abs(ruler.end[1] - ruler.start[1])) * cellsPerFt : 0;
+
+  function aoeCells(): Set<string> {
+    const s = new Set<string>();
+    if (!aoeAnchor) return s;
+    const [ax, ay] = aoeAnchor;
+    const r = Math.round(aoeSize / cellsPerFt);
+    for (let x = 0; x < cols; x++) for (let y = 0; y < rows; y++) {
+      const dx = x - ax, dy = y - ay;
+      if (aoeShape === "circle") { if (Math.hypot(dx, dy) <= r + 0.001) s.add(`${x},${y}`); }
+      else if (aoeShape === "square") { if (Math.abs(dx) <= r && Math.abs(dy) <= r) s.add(`${x},${y}`); }
+      else if (aoeShape === "line") { if (dy === 0 && dx >= 0 && dx < r) s.add(`${x},${y}`); }
+      else if (aoeShape === "cone") { if (dx >= 0 && dx <= r && Math.abs(dy) <= dx) s.add(`${x},${y}`); }
+    }
+    return s;
+  }
 
   const fogEnabled = !!state?.fogEnabled;
   const revealed: Set<string> = (() => { try { return new Set(JSON.parse(state?.revealedCells || "[]")); } catch { return new Set(); } })();
@@ -137,15 +160,34 @@ function MapBoard({ state, isDM, myCharacterIds, onMove, onSetMap, maps, campaig
       {isDM && <MapControls maps={maps} campaignId={campaignId} onSetMap={onSetMap} onMapsChanged={onMapsChanged} current={map?.id} />}
       {isDM && map && (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-[#a9977c]">ערפל קרב:</span>
-          <button className={fogEnabled ? "btn-gold !py-0.5" : "btn-ghost !py-0.5"} onClick={() => fogOp({ op: "setFog", enabled: !fogEnabled })}>{fogEnabled ? "פעיל" : "כבוי"}</button>
-          <button className={brush === "reveal" ? "btn-gold !py-0.5" : "btn-ghost !py-0.5"} onClick={() => setBrush(brush === "reveal" ? "off" : "reveal")}>🖌 חשוף</button>
-          <button className={brush === "hide" ? "btn-gold !py-0.5" : "btn-ghost !py-0.5"} onClick={() => setBrush(brush === "hide" ? "off" : "hide")}>🌫 הסתר</button>
-          <button className="btn-ghost !py-0.5" onClick={() => fogOp({ op: "setAllCells", revealAll: true })}>חשוף הכל</button>
-          <button className="btn-ghost !py-0.5" onClick={() => fogOp({ op: "setAllCells", revealAll: false })}>הסתר הכל</button>
+          <span className="text-[#a9977c]">Fog of War:</span>
+          <button className={fogEnabled ? "btn-gold !py-0.5" : "btn-ghost !py-0.5"} onClick={() => fogOp({ op: "setFog", enabled: !fogEnabled })}>{fogEnabled ? "On" : "Off"}</button>
+          <button className={brush === "reveal" ? "btn-gold !py-0.5" : "btn-ghost !py-0.5"} onClick={() => setBrush(brush === "reveal" ? "off" : "reveal")}>🖌 Reveal</button>
+          <button className={brush === "hide" ? "btn-gold !py-0.5" : "btn-ghost !py-0.5"} onClick={() => setBrush(brush === "hide" ? "off" : "hide")}>🌫 Hide</button>
+          <button className="btn-ghost !py-0.5" onClick={() => fogOp({ op: "setAllCells", revealAll: true })}>Reveal All</button>
+          <button className="btn-ghost !py-0.5" onClick={() => fogOp({ op: "setAllCells", revealAll: false })}>Hide All</button>
         </div>
       )}
-      <div className="mt-2 text-xs text-[#a9977c]">קנה מידה: {gridSize}px = 5ft · {cols}×{rows} משבצות{brush !== "off" ? " · מצב מכחול פעיל (גרור על המפה)" : ""}</div>
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+        <span className="text-[#a9977c]">Tools:</span>
+        <button className={tool === "ruler" ? "btn-gold !py-0.5" : "btn-ghost !py-0.5"} onClick={() => { setTool(tool === "ruler" ? "off" : "ruler"); setRuler(null); }}>📏 Ruler</button>
+        <button className={tool === "aoe" ? "btn-gold !py-0.5" : "btn-ghost !py-0.5"} onClick={() => { setTool(tool === "aoe" ? "off" : "aoe"); setAoeAnchor(null); }}>🔥 AoE</button>
+        {tool === "aoe" && (
+          <>
+            <select className="input !w-auto !py-0.5" value={aoeShape} onChange={(e) => setAoeShape(e.target.value as any)}>
+              <option value="circle">Circle (radius)</option>
+              <option value="square">Square</option>
+              <option value="cone">Cone</option>
+              <option value="line">Line</option>
+            </select>
+            <input className="input !w-16 !py-0.5" type="number" step={5} min={5} value={aoeSize} onChange={(e) => setAoeSize(+e.target.value)} title="Size (ft)" />
+            <span className="text-[#a9977c]">ft</span>
+            {aoeAnchor && <button className="btn-ghost !py-0.5" onClick={() => setAoeAnchor(null)}>Clear</button>}
+          </>
+        )}
+        {tool === "ruler" && ruler && <span className="chip text-gold">{distFt} ft</span>}
+      </div>
+      <div className="mt-2 text-xs text-[#a9977c]">Scale: {gridSize}px = 5ft · {cols}×{rows} squares{brush !== "off" ? " · brush mode active (drag over the map)" : ""}</div>
       <DndContext sensors={sensors} modifiers={[restrictToParentElement]} onDragEnd={onDragEnd}>
         <div className="relative mt-2 select-none" style={{ width: cols * gridSize, height: rows * gridSize,
           backgroundImage: map?.imageUrl ? `url(${map.imageUrl})` : undefined,
@@ -169,6 +211,31 @@ function MapBoard({ state, isDM, myCharacterIds, onMove, onSetMap, maps, campaig
             return <TokenView key={t.id} token={t} combatant={combatant} gridSize={gridSize} draggable={canDrag(t)} dm={isDM} />;
           })}
 
+          {/* AoE template highlight */}
+          {tool === "aoe" && aoeAnchor && [...aoeCells()].map((k) => {
+            const [x, y] = k.split(",").map(Number);
+            return <div key={`aoe-${k}`} className="absolute" style={{ left: x * gridSize, top: y * gridSize, width: gridSize, height: gridSize, background: "rgba(224,90,30,0.35)", border: "1px solid rgba(224,90,30,0.6)", pointerEvents: "none", zIndex: 25 }} />;
+          })}
+
+          {/* Ruler line + label */}
+          {tool === "ruler" && ruler && (
+            <svg className="pointer-events-none absolute inset-0" style={{ zIndex: 45 }} width={cols * gridSize} height={rows * gridSize}>
+              <line x1={ruler.start[0] * gridSize + gridSize / 2} y1={ruler.start[1] * gridSize + gridSize / 2}
+                x2={ruler.end[0] * gridSize + gridSize / 2} y2={ruler.end[1] * gridSize + gridSize / 2}
+                stroke="#c9a227" strokeWidth={3} strokeDasharray="6 4" />
+              <circle cx={ruler.end[0] * gridSize + gridSize / 2} cy={ruler.end[1] * gridSize + gridSize / 2} r={5} fill="#c9a227" />
+              <text x={ruler.end[0] * gridSize + gridSize / 2 + 8} y={ruler.end[1] * gridSize + gridSize / 2 - 8} fill="#f4ecd8" fontSize={14} fontWeight="bold">{distFt} ft</text>
+            </svg>
+          )}
+
+          {/* Ruler / AoE interaction layer */}
+          {tool !== "off" && (
+            <div className="absolute inset-0" style={{ zIndex: 46, cursor: "crosshair" }}
+              onPointerDown={(e) => { if (tool === "ruler") { const c = cellFrom(e, gridSize, cols, rows); setRuler({ start: c, end: c }); } }}
+              onPointerMove={(e) => { if (tool === "ruler" && ruler) { const c = cellFrom(e, gridSize, cols, rows); setRuler((r) => r ? { ...r, end: c } : r); } }}
+              onClick={(e) => { if (tool === "aoe") setAoeAnchor(cellFrom(e, gridSize, cols, rows)); }} />
+          )}
+
           {/* Fog paint layer (DM brush mode) */}
           {isDM && brush !== "off" && (
             <div className="absolute inset-0" style={{ zIndex: 40 }}
@@ -191,6 +258,13 @@ function MapBoard({ state, isDM, myCharacterIds, onMove, onSetMap, maps, campaig
   );
 }
 
+function cellFrom(e: React.PointerEvent | React.MouseEvent, gridSize: number, cols: number, rows: number): [number, number] {
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  const x = Math.max(0, Math.min(cols - 1, Math.floor((e.clientX - rect.left) / gridSize)));
+  const y = Math.max(0, Math.min(rows - 1, Math.floor((e.clientY - rect.top) / gridSize)));
+  return [x, y];
+}
+
 function TokenView({ token, combatant, gridSize, draggable, dm }: any) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: token.id, disabled: !draggable });
   const size = (token.sizeSquares ?? 1) * gridSize;
@@ -205,9 +279,11 @@ function TokenView({ token, combatant, gridSize, draggable, dm }: any) {
     <div ref={setNodeRef} style={style} {...listeners} {...attributes}
       className="flex items-center justify-center rounded-full border-2 text-xs font-bold text-white"
       title={combatant ? `${combatant.name} — HP ${combatant.currentHp}/${combatant.maxHp} AC ${combatant.ac}` : token.label}>
-      <div className="flex h-full w-full items-center justify-center rounded-full border-2 border-black/40"
-        style={{ background: token.color }}>
-        {token.label}
+      <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border-2 border-black/40"
+        style={token.imageUrl
+          ? { backgroundImage: `url(${token.imageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+          : { background: token.color }}>
+        {!token.imageUrl && token.label}
       </div>
       {combatant && (
         <div className="absolute -bottom-1 left-0 h-1 w-full rounded bg-black/50">
@@ -247,20 +323,20 @@ function MapControls({ maps, campaignId, onSetMap, onMapsChanged, current }: any
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
       <select className="input !w-auto" value={current ?? ""} onChange={(e) => onSetMap?.(e.target.value)}>
-        <option value="">— בחר מפה —</option>
+        <option value="">— Select a map —</option>
         {maps.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
       </select>
-      <button className="btn-gold" onClick={() => setShowLib(true)}>📚 ספריית מפות</button>
-      <label className="btn-ghost cursor-pointer">{uploading ? "מעלה..." : "⬆ העלה מפה"}
+      <button className="btn-gold" onClick={() => setShowLib(true)}>📚 Map Library</button>
+      <label className="btn-ghost cursor-pointer">{uploading ? "Uploading..." : "⬆ Upload Map"}
         <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
       </label>
-      <details><summary className="cursor-pointer text-gold">+ רשת/URL</summary>
+      <details><summary className="cursor-pointer text-gold">+ Grid/URL</summary>
         <div className="mt-2 flex flex-wrap gap-1">
-          <input className="input !w-28" placeholder="שם" value={name} onChange={(e) => setName(e.target.value)} />
-          <input className="input !w-56" placeholder="URL תמונה (אופציונלי)" value={url} onChange={(e) => setUrl(e.target.value)} />
-          <input className="input !w-16" type="number" value={cols} onChange={(e) => setCols(+e.target.value)} title="עמודות" />
-          <input className="input !w-16" type="number" value={rows} onChange={(e) => setRows(+e.target.value)} title="שורות" />
-          <button className="btn-gold" onClick={create}>צור</button>
+          <input className="input !w-28" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
+          <input className="input !w-56" placeholder="Image URL (optional)" value={url} onChange={(e) => setUrl(e.target.value)} />
+          <input className="input !w-16" type="number" value={cols} onChange={(e) => setCols(+e.target.value)} title="Columns" />
+          <input className="input !w-16" type="number" value={rows} onChange={(e) => setRows(+e.target.value)} title="Rows" />
+          <button className="btn-gold" onClick={create}>Create</button>
         </div>
       </details>
       {showLib && <MapLibraryModal onPick={fromLibrary} onClose={() => setShowLib(false)} />}
@@ -276,8 +352,8 @@ function MapLibraryModal({ onPick, onClose }: { onPick: (id: string) => void; on
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div className="card max-h-[85vh] w-full max-w-2xl overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-lg text-gold">ספריית מפות ({presets.length})</h3>
-          <button className="btn-ghost !py-0.5" onClick={onClose}>סגור</button>
+          <h3 className="font-display text-lg text-gold">Map Library ({presets.length})</h3>
+          <button className="btn-ghost !py-0.5" onClick={onClose}>Close</button>
         </div>
         {cats.map((cat) => (
           <div key={cat} className="mb-3">
@@ -300,7 +376,7 @@ function MapLibraryModal({ onPick, onClose }: { onPick: (id: string) => void; on
 function InitiativeTracker({ combatants, activeId, isDM, onUpdate }: any) {
   return (
     <div className="card">
-      <h3 className="mb-2 font-display text-gold">סדר יוזמה</h3>
+      <h3 className="mb-2 font-display text-gold">Initiative Order</h3>
       <div className="space-y-1">
         {combatants.map((c: any) => {
           const conditions = safeArr(c.conditions);
@@ -320,12 +396,13 @@ function InitiativeTracker({ combatants, activeId, isDM, onUpdate }: any) {
                 <div className="mt-1 flex flex-wrap items-center gap-1 text-xs">
                   <button className="btn-ghost !px-1.5 !py-0" onClick={() => onUpdate({ op: "updateCombatant", combatantId: c.id, patch: { currentHp: Math.max(0, c.currentHp - 5) } })}>−5</button>
                   <button className="btn-ghost !px-1.5 !py-0" onClick={() => onUpdate({ op: "updateCombatant", combatantId: c.id, patch: { currentHp: Math.min(c.maxHp, c.currentHp + 5) } })}>+5</button>
-                  <button className="btn-ghost !px-1.5 !py-0" onClick={() => onUpdate({ op: "updateCombatant", combatantId: c.id, patch: { isVisible: !c.isVisible } })}>{c.isVisible ? "הסתר" : "חשוף"}</button>
+                  <button className="btn-ghost !px-1.5 !py-0" onClick={() => onUpdate({ op: "updateCombatant", combatantId: c.id, patch: { isVisible: !c.isVisible } })}>{c.isVisible ? "Hide" : "Reveal"}</button>
+                  {c.token && <button className="btn-ghost !px-1.5 !py-0" title="Set token image" onClick={() => { const url = window.prompt("Token image URL (blank to clear):", c.token.imageUrl ?? ""); if (url !== null) onUpdate({ op: "updateToken", tokenId: c.token.id, patch: { imageUrl: url || null } }); }}>🖼</button>}
                   <select className="input !w-auto !py-0 text-xs" defaultValue="" onChange={(e) => { if (!e.target.value) return;
                     const has = conditions.includes(e.target.value);
                     const next = has ? conditions.filter((x: string) => x !== e.target.value) : [...conditions, e.target.value];
                     onUpdate({ op: "updateCombatant", combatantId: c.id, patch: { conditions: next } }); e.target.value = ""; }}>
-                    <option value="">±מצב</option>
+                    <option value="">±Condition</option>
                     {CONDITIONS.map((cond) => <option key={cond}>{cond}</option>)}
                   </select>
                   <button className="btn-ghost !px-1.5 !py-0" onClick={() => onUpdate({ op: "removeCombatant", combatantId: c.id })}>🗑</button>
@@ -334,7 +411,7 @@ function InitiativeTracker({ combatants, activeId, isDM, onUpdate }: any) {
             </div>
           );
         })}
-        {combatants.length === 0 && <p className="text-sm text-[#a9977c]">אין משתתפים. הוסף בבניית הקרב.</p>}
+        {combatants.length === 0 && <p className="text-sm text-[#a9977c]">No combatants. Add some in Build Encounter.</p>}
       </div>
     </div>
   );
@@ -344,7 +421,7 @@ function InitiativeTracker({ combatants, activeId, isDM, onUpdate }: any) {
 function CombatLog({ log }: any) {
   return (
     <div className="card">
-      <h3 className="mb-2 font-display text-gold">יומן קרב</h3>
+      <h3 className="mb-2 font-display text-gold">Combat Log</h3>
       <div className="max-h-64 space-y-1 overflow-y-auto text-xs">
         {log.map((l: any) => (
           <div key={l.id} className="border-b border-[#241d17] pb-1">
@@ -372,28 +449,28 @@ function Builder({ op, campaignChars, combatants }: any) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <div>
-        <h4 className="mb-2 text-gold">הוסף שחקנים</h4>
+        <h4 className="mb-2 text-gold">Add Players</h4>
         <div className="flex flex-wrap gap-1">
           {campaignChars.map((c: any) => (
             <button key={c.id} disabled={existingCharIds.has(c.id)} className={existingCharIds.has(c.id) ? "chip opacity-40" : "btn-ghost"}
               onClick={() => op({ op: "addPlayers", characterIds: [c.id] })}>{c.name}</button>
           ))}
-          {campaignChars.length === 0 && <span className="text-sm text-[#a9977c]">אין דמויות בקמפיין.</span>}
+          {campaignChars.length === 0 && <span className="text-sm text-[#a9977c]">No characters in this campaign.</span>}
         </div>
       </div>
       <div>
-        <h4 className="mb-2 text-gold">הוסף אויבים (בסטיאריון SRD)</h4>
+        <h4 className="mb-2 text-gold">Add Enemies (SRD Bestiary)</h4>
         <div className="mb-2 flex gap-1">
-          <input className="input" placeholder="חיפוש מפלצת..." value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} />
-          <button className="btn-ghost" onClick={search}>חפש</button>
-          <input className="input !w-14" type="number" min={1} max={12} value={count} onChange={(e) => setCount(+e.target.value)} title="כמות" />
-          <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={rollHp} onChange={(e) => setRollHp(e.target.checked)} />HP אקראי</label>
+          <input className="input" placeholder="Search monster..." value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} />
+          <button className="btn-ghost" onClick={search}>Search</button>
+          <input className="input !w-14" type="number" min={1} max={12} value={count} onChange={(e) => setCount(+e.target.value)} title="Count" />
+          <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={rollHp} onChange={(e) => setRollHp(e.target.checked)} />Random HP</label>
         </div>
         <div className="max-h-48 space-y-1 overflow-y-auto text-sm">
           {results.map((m: any) => (
             <div key={m.id} className="flex items-center justify-between border-b border-[#241d17] py-1">
               <span>{m.name} <span className="text-xs text-[#a9977c]">CR {m.cr} · HP {m.hp} · AC {m.ac}</span></span>
-              <button className="btn-ghost !py-0.5" onClick={() => op({ op: "addMonster", monsterId: m.id, count, rollHp })}>+ הוסף</button>
+              <button className="btn-ghost !py-0.5" onClick={() => op({ op: "addMonster", monsterId: m.id, count, rollHp })}>+ Add</button>
             </div>
           ))}
         </div>
@@ -423,31 +500,31 @@ function AttackPanel({ op, combatants }: any) {
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-[#a9977c]">בחר אויב תוקף, פעולה, ומטרות (שחקן אחד או רבים) — המערכת מגלגלת תקיפה מול ה-AC של כל מטרה.</p>
+      <p className="text-sm text-[#a9977c]">Choose an attacker, an action, and targets (one or many players) — the system rolls the attack against each target's AC.</p>
       <div className="grid gap-2 md:grid-cols-3">
         <div>
-          <label className="label">אויב תוקף</label>
+          <label className="label">Attacker</label>
           <select className="input" value={attackerId} onChange={(e) => { setAttackerId(e.target.value); setActionName(""); }}>
             <option value="">—</option>
             {attackers.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
         <div>
-          <label className="label">פעולה</label>
+          <label className="label">Action</label>
           <select className="input" value={actionName} onChange={(e) => setActionName(e.target.value)}>
             {actions.map((a: any) => <option key={a.name} value={a.name}>{a.name}{a.toHit != null ? ` (+${a.toHit})` : a.save ? ` (DC ${a.save.dc} ${a.save.ability})` : ""}</option>)}
             {actions.length === 0 && <option>—</option>}
           </select>
         </div>
         <div>
-          <label className="label">יתרון/חיסרון</label>
+          <label className="label">Advantage/Disadvantage</label>
           <select className="input" value={adv} onChange={(e) => setAdv(e.target.value as any)}>
-            <option value="none">רגיל</option><option value="adv">יתרון</option><option value="dis">חיסרון</option>
+            <option value="none">Normal</option><option value="adv">Advantage</option><option value="dis">Disadvantage</option>
           </select>
         </div>
       </div>
       <div>
-        <label className="label">מטרות (שחקנים)</label>
+        <label className="label">Targets (players)</label>
         <div className="flex flex-wrap gap-1">
           {players.map((p: any) => (
             <button key={p.id} className={targets.includes(p.id) ? "btn-gold" : "btn-ghost"}
@@ -457,7 +534,7 @@ function AttackPanel({ op, combatants }: any) {
           ))}
         </div>
       </div>
-      <button className="btn-primary" disabled={!attackerId || targets.length === 0} onClick={doAttack}>🎲 גלגל תקיפה</button>
+      <button className="btn-primary" disabled={!attackerId || targets.length === 0} onClick={doAttack}>🎲 Roll Attack</button>
       {result?.outcomes && (
         <div className="rounded border border-[#3a2f24] p-2 text-sm">
           <b className="text-gold">{result.action}</b>

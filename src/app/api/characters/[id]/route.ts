@@ -41,7 +41,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
   const { user, res } = await requireUser();
   if (!user) return res!;
-  if (!(await canEditCharacter(user.id, id))) return bad("אין הרשאה לערוך דמות זו", 403);
+  if (!(await canEditCharacter(user.id, id))) return bad("Not authorized to edit this character", 403);
 
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return bad("Invalid input");
@@ -73,7 +73,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if (!user) return res!;
   const c = await prisma.character.findUnique({ where: { id } });
   if (!c) return bad("Not found", 404);
-  if (c.ownerId !== user.id) return bad("רק הבעלים יכול למחוק", 403);
+  if (c.ownerId !== user.id) return bad("Only the owner can delete", 403);
   await prisma.character.delete({ where: { id } });
   if (c.campaignId) emitToCampaign(c.campaignId, "character:deleted", { characterId: id });
   return NextResponse.json({ ok: true });

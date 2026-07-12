@@ -72,18 +72,18 @@ export function CharacterWizard({ campaignId }: { campaignId: string | null }) {
       }),
     });
     setBusy(false);
-    if (!res.ok) { setError((await res.json()).error ?? "שגיאה"); return; }
+    if (!res.ok) { setError((await res.json()).error ?? "Error"); return; }
     const c = await res.json();
     router.push(`/characters/${c.id}`);
   }
 
-  if (!opts) return <p className="text-[#a9977c]">טוען נתוני SRD...</p>;
+  if (!opts) return <p className="text-[#a9977c]">Loading SRD data...</p>;
 
   return (
     <div className="space-y-6">
       {/* Race */}
       <section className="card">
-        <h2 className="mb-2 font-display text-lg text-gold">1 · גזע</h2>
+        <h2 className="mb-2 font-display text-lg text-gold">1 · Race</h2>
         <div className="flex flex-wrap gap-2">
           {opts.races.map((r) => (
             <button key={r.id} onClick={() => setRaceId(r.id)} className={raceId === r.id ? "btn-gold" : "btn-ghost"}>{r.name}</button>
@@ -91,8 +91,8 @@ export function CharacterWizard({ campaignId }: { campaignId: string | null }) {
         </div>
         {race && (
           <div className="mt-3 text-sm text-[#c9bda5]">
-            <div>מהירות {race.speed}ft · גודל {race.size} · בונוסים: {race.abilityBonuses.map((a) => `${a.ability} +${a.bonus}`).join(", ") || "—"}</div>
-            <details className="mt-1"><summary className="cursor-pointer text-gold">תכונות גזע ({race.traits.length})</summary>
+            <div>Speed {race.speed}ft · Size {race.size} · Bonuses: {race.abilityBonuses.map((a) => `${a.ability} +${a.bonus}`).join(", ") || "—"}</div>
+            <details className="mt-1"><summary className="cursor-pointer text-gold">Racial Traits ({race.traits.length})</summary>
               <ul className="mt-1 list-disc pr-5">{race.traits.map((t) => <li key={t.name}><b>{t.name}:</b> {t.description.slice(0, 120)}…</li>)}</ul>
             </details>
           </div>
@@ -101,7 +101,7 @@ export function CharacterWizard({ campaignId }: { campaignId: string | null }) {
 
       {/* Class */}
       <section className="card">
-        <h2 className="mb-2 font-display text-lg text-gold">2 · מקצוע</h2>
+        <h2 className="mb-2 font-display text-lg text-gold">2 · Class</h2>
         <div className="flex flex-wrap gap-2">
           {opts.classes.map((c) => (
             <button key={c.id} onClick={() => { setClassId(c.id); setSkills((s) => s.filter((x) => bgSkills.includes(x))); }} className={classId === c.id ? "btn-gold" : "btn-ghost"}>{c.name}</button>
@@ -109,21 +109,21 @@ export function CharacterWizard({ campaignId }: { campaignId: string | null }) {
         </div>
         {klass && (
           <div className="mt-3 text-sm text-[#c9bda5]">
-            Hit die d{klass.hitDie} · הצלות: {klass.savingThrows.join(", ")} {klass.spellcastingAbility ? `· מקלל (${klass.spellcastingAbility})` : ""}
+            Hit die d{klass.hitDie} · Saving Throws: {klass.savingThrows.join(", ")} {klass.spellcastingAbility ? `· Spellcaster (${klass.spellcastingAbility})` : ""}
           </div>
         )}
       </section>
 
       {/* Abilities */}
       <section className="card">
-        <h2 className="mb-2 font-display text-lg text-gold">3 · יכולות</h2>
+        <h2 className="mb-2 font-display text-lg text-gold">3 · Ability Scores</h2>
         <div className="mb-3 flex gap-2">
           {(["standard", "pointbuy", "manual"] as const).map((m) => (
             <button key={m} onClick={() => setMethod(m)} className={method === m ? "btn-gold" : "btn-ghost"}>
-              {m === "standard" ? "מערך סטנדרטי" : m === "pointbuy" ? "Point Buy" : "ידני"}
+              {m === "standard" ? "Standard Array" : m === "pointbuy" ? "Point Buy" : "Manual"}
             </button>
           ))}
-          {method === "pointbuy" && <span className={`chip ${pointsUsed > 27 ? "text-red-400" : "text-gold"}`}>נקודות: {pointsUsed}/27</span>}
+          {method === "pointbuy" && <span className={`chip ${pointsUsed > 27 ? "text-red-400" : "text-gold"}`}>Points: {pointsUsed}/27</span>}
         </div>
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
           {ABILITIES.map((a) => (
@@ -144,32 +144,32 @@ export function CharacterWizard({ campaignId }: { campaignId: string | null }) {
             </div>
           ))}
         </div>
-        {method === "standard" && <p className="mt-2 text-xs text-[#a9977c]">מערך: 15,14,13,12,10,8 — הקצה ערך לכל יכולת.</p>}
+        {method === "standard" && <p className="mt-2 text-xs text-[#a9977c]">Array: 15,14,13,12,10,8 — assign a value to each ability.</p>}
       </section>
 
       {/* Background */}
       <section className="card">
-        <h2 className="mb-2 font-display text-lg text-gold">4 · רקע</h2>
+        <h2 className="mb-2 font-display text-lg text-gold">4 · Background</h2>
         <div className="flex flex-wrap gap-2">
           {opts.backgrounds.map((b) => (
             <button key={b.id} onClick={() => setBgId(b.id)} className={bgId === b.id ? "btn-gold" : "btn-ghost"}>{b.name}</button>
           ))}
         </div>
-        {bg && <div className="mt-3 text-sm text-[#c9bda5]">מיומנויות: {bg.skills.join(", ")} · זהב פתיחה {bg.startGp}gp · <b>{bg.featureName}</b></div>}
+        {bg && <div className="mt-3 text-sm text-[#c9bda5]">Skills: {bg.skills.join(", ")} · Starting gold {bg.startGp}gp · <b>{bg.featureName}</b></div>}
       </section>
 
       {/* Skills */}
       {klass && skillChoices && (
         <section className="card">
-          <h2 className="mb-2 font-display text-lg text-gold">5 · מיומנויות מקצוע (בחר {skillChoices.choose})</h2>
+          <h2 className="mb-2 font-display text-lg text-gold">5 · Class Skills (choose {skillChoices.choose})</h2>
           <div className="flex flex-wrap gap-2">
             {skillChoices.from.map((s) => {
               const fromBg = bgSkills.includes(s);
               const on = skills.includes(s) || fromBg;
               return (
                 <button key={s} disabled={fromBg} onClick={() => toggleSkill(s)}
-                  className={on ? "btn-gold" : "btn-ghost"} title={fromBg ? "כבר מהרקע" : ""}>
-                  {s}{fromBg ? " (רקע)" : ""}
+                  className={on ? "btn-gold" : "btn-ghost"} title={fromBg ? "Already from background" : ""}>
+                  {s}{fromBg ? " (Background)" : ""}
                 </button>
               );
             })}
@@ -179,8 +179,8 @@ export function CharacterWizard({ campaignId }: { campaignId: string | null }) {
 
       {/* Details */}
       <section className="card">
-        <h2 className="mb-2 font-display text-lg text-gold">6 · פרטים</h2>
-        <label className="label">שם הדמות</label>
+        <h2 className="mb-2 font-display text-lg text-gold">6 · Details</h2>
+        <label className="label">Character Name</label>
         <input className="input mb-3" value={name} onChange={(e) => setName(e.target.value)} />
         <label className="label">Alignment</label>
         <select className="input" value={alignment} onChange={(e) => setAlignment(e.target.value)}>
@@ -190,7 +190,7 @@ export function CharacterWizard({ campaignId }: { campaignId: string | null }) {
 
       {error && <p className="text-sm text-red-400">{error}</p>}
       <button className="btn-primary w-full text-lg" disabled={!canSubmit || busy} onClick={submit}>
-        {busy ? "יוצר..." : "✨ צור דמות"}
+        {busy ? "Creating..." : "✨ Create Character"}
       </button>
     </div>
   );

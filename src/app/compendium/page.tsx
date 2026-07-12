@@ -6,13 +6,13 @@ import { TopNav } from "@/components/TopNav";
 import { CompendiumList } from "./CompendiumList";
 
 const TABS = [
-  { key: "spells", label: "קסמים" },
-  { key: "monsters", label: "מפלצות" },
-  { key: "equipment", label: "ציוד" },
-  { key: "magic", label: "פריטי קסם" },
-  { key: "races", label: "גזעים" },
-  { key: "classes", label: "מקצועות" },
-  { key: "conditions", label: "מצבים" },
+  { key: "spells", label: "Spells" },
+  { key: "monsters", label: "Monsters" },
+  { key: "equipment", label: "Equipment" },
+  { key: "magic", label: "Magic Items" },
+  { key: "races", label: "Races" },
+  { key: "classes", label: "Classes" },
+  { key: "conditions", label: "Conditions" },
 ] as const;
 
 export default async function Compendium({
@@ -53,7 +53,7 @@ export default async function Compendium({
     <div>
       <TopNav user={user} />
       <main className="mx-auto max-w-5xl space-y-4 p-6">
-        <h1 className="font-display text-2xl text-gold">קומפנדיום SRD</h1>
+        <h1 className="font-display text-2xl text-gold">SRD Compendium</h1>
         <div className="flex flex-wrap gap-2">
           {TABS.map((t) => (
             <Link key={t.key} href={`/compendium?tab=${t.key}`}
@@ -62,10 +62,10 @@ export default async function Compendium({
         </div>
         <form className="flex gap-2">
           <input type="hidden" name="tab" value={tab} />
-          <input className="input" name="q" defaultValue={q} placeholder="חיפוש לפי שם..." />
-          <button className="btn-primary">חפש</button>
+          <input className="input" name="q" defaultValue={q} placeholder="Search by name..." />
+          <button className="btn-primary">Search</button>
         </form>
-        <div className="text-xs text-[#a9977c]">{rows.length} תוצאות · לחץ לפרטים מלאים</div>
+        <div className="text-xs text-[#a9977c]">{rows.length} results · click for full details</div>
         <CompendiumList rows={rows} tab={tab} />
       </main>
     </div>

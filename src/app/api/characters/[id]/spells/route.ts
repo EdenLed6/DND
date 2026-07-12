@@ -17,7 +17,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   const { user, res } = await requireUser();
   if (!user) return res!;
-  if (!(await canEditCharacter(user.id, id))) return bad("אין הרשאה", 403);
+  if (!(await canEditCharacter(user.id, id))) return bad("Not authorized", 403);
   const parsed = addSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return bad("Invalid input");
   await prisma.characterSpell.upsert({
@@ -33,7 +33,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
   const { user, res } = await requireUser();
   if (!user) return res!;
-  if (!(await canEditCharacter(user.id, id))) return bad("אין הרשאה", 403);
+  if (!(await canEditCharacter(user.id, id))) return bad("Not authorized", 403);
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return bad("Invalid input");
   await prisma.characterSpell.updateMany({
@@ -47,7 +47,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   const { id } = await params;
   const { user, res } = await requireUser();
   if (!user) return res!;
-  if (!(await canEditCharacter(user.id, id))) return bad("אין הרשאה", 403);
+  if (!(await canEditCharacter(user.id, id))) return bad("Not authorized", 403);
   const { searchParams } = new URL(req.url);
   const spellId = searchParams.get("spellId");
   if (!spellId) return bad("spellId required");

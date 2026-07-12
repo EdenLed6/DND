@@ -45,10 +45,19 @@ export async function addPlayers(encounterId: string, characterIds: string[]) {
     });
     await prisma.token.create({
       data: { encounterId, combatantId: combatant.id, characterId: cid, label: view.character.name.slice(0, 2),
-        color: "#2e6da4", gridX: 1 + (sort % 8), gridY: 1, sizeSquares: 1 },
+        color: "#2e6da4", imageUrl: view.character.avatarUrl ?? null, gridX: 1 + (sort % 8), gridY: 1, sizeSquares: 1 },
     });
   }
   emitToEncounter(encounterId, "combatants:changed", { encounterId });
+}
+
+/** Update a token's appearance (image, color, size). */
+export async function updateToken(encounterId: string, tokenId: string, patch: { imageUrl?: string | null; color?: string; sizeSquares?: number; label?: string }) {
+  const data: any = {};
+  for (const k of ["imageUrl", "color", "sizeSquares", "label"] as const) if (k in patch) data[k] = patch[k];
+  const t = await prisma.token.update({ where: { id: tokenId }, data });
+  emitToEncounter(encounterId, "combatants:changed", { encounterId });
+  return t;
 }
 
 /** Add N copies of an SRD monster. */

@@ -19,7 +19,7 @@ export function DashboardActions() {
       body: JSON.stringify({ name, description }),
     });
     setBusy(false);
-    if (!res.ok) { setError((await res.json()).error ?? "שגיאה"); return; }
+    if (!res.ok) { setError((await res.json()).error ?? "Something went wrong"); return; }
     const c = await res.json();
     router.push(`/campaigns/${c.id}`);
   }
@@ -31,27 +31,27 @@ export function DashboardActions() {
       body: JSON.stringify({ code: code.trim() }),
     });
     setBusy(false);
-    if (!res.ok) { setError((await res.json()).error ?? "קוד לא תקין"); return; }
+    if (!res.ok) { setError((await res.json()).error ?? "Invalid code"); return; }
     const c = await res.json();
     router.push(`/campaigns/${c.id}`);
   }
 
   return (
     <div className="flex flex-wrap gap-3">
-      <button className="btn-primary" onClick={() => { setModal("campaign"); setError(null); }}>➕ קמפיין חדש</button>
-      <button className="btn-ghost" onClick={() => { setModal("join"); setError(null); }}>🔑 הצטרף לקמפיין</button>
-      <Link href="/characters/new" className="btn-gold">🎭 דמות חדשה</Link>
+      <button className="btn-primary" onClick={() => { setModal("campaign"); setError(null); }}>➕ New Campaign</button>
+      <button className="btn-ghost" onClick={() => { setModal("join"); setError(null); }}>🔑 Join Campaign</button>
+      <Link href="/characters/new" className="btn-gold">🎭 New Character</Link>
       <label className="btn-ghost cursor-pointer">
-        ⬆ ייבא דמות
+        ⬆ Import Character
         <input type="file" accept=".json,application/json" className="hidden" onChange={async (e) => {
           const file = e.target.files?.[0]; if (!file) return;
           try {
             const data = JSON.parse(await file.text());
             const res = await fetch("/api/characters/import", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
-            if (!res.ok) { setError((await res.json()).error ?? "ייבוא נכשל"); return; }
+            if (!res.ok) { setError((await res.json()).error ?? "Import failed"); return; }
             const { id } = await res.json();
             router.push(`/characters/${id}`);
-          } catch { setError("קובץ JSON לא תקין"); }
+          } catch { setError("Invalid JSON file"); }
         }} />
       </label>
 
@@ -60,26 +60,26 @@ export function DashboardActions() {
           <div className="card w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             {modal === "campaign" ? (
               <>
-                <h3 className="mb-3 font-display text-lg text-gold">קמפיין חדש</h3>
-                <label className="label">שם הקמפיין</label>
+                <h3 className="mb-3 font-display text-lg text-gold">New Campaign</h3>
+                <label className="label">Campaign Name</label>
                 <input className="input mb-3" value={name} onChange={(e) => setName(e.target.value)} />
-                <label className="label">תיאור (אופציונלי)</label>
+                <label className="label">Description (optional)</label>
                 <textarea className="input mb-3" value={description} onChange={(e) => setDescription(e.target.value)} />
                 {error && <p className="mb-2 text-sm text-red-400">{error}</p>}
                 <div className="flex justify-end gap-2">
-                  <button className="btn-ghost" onClick={() => setModal(null)}>ביטול</button>
-                  <button className="btn-primary" disabled={busy || !name} onClick={createCampaign}>צור</button>
+                  <button className="btn-ghost" onClick={() => setModal(null)}>Cancel</button>
+                  <button className="btn-primary" disabled={busy || !name} onClick={createCampaign}>Create</button>
                 </div>
               </>
             ) : (
               <>
-                <h3 className="mb-3 font-display text-lg text-gold">הצטרפות לקמפיין</h3>
-                <label className="label">קוד הזמנה</label>
+                <h3 className="mb-3 font-display text-lg text-gold">Join Campaign</h3>
+                <label className="label">Invite Code</label>
                 <input className="input mb-3" value={code} onChange={(e) => setCode(e.target.value)} placeholder="ABCD12" />
                 {error && <p className="mb-2 text-sm text-red-400">{error}</p>}
                 <div className="flex justify-end gap-2">
-                  <button className="btn-ghost" onClick={() => setModal(null)}>ביטול</button>
-                  <button className="btn-primary" disabled={busy || !code} onClick={joinCampaign}>הצטרף</button>
+                  <button className="btn-ghost" onClick={() => setModal(null)}>Cancel</button>
+                  <button className="btn-primary" disabled={busy || !code} onClick={joinCampaign}>Join</button>
                 </div>
               </>
             )}

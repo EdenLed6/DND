@@ -17,8 +17,8 @@ export default async function NewCharacter({ searchParams }: { searchParams: Pro
     <div>
       <TopNav user={user} />
       <main className="mx-auto max-w-3xl p-6">
-        <h1 className="mb-1 font-display text-2xl text-gold">יצירת דמות חדשה</h1>
-        {campaignName && <p className="mb-4 text-sm text-[#a9977c]">בקמפיין: {campaignName}</p>}
+        <h1 className="mb-1 font-display text-2xl text-gold">Create New Character</h1>
+        {campaignName && <p className="mb-4 text-sm text-[#a9977c]">In campaign: {campaignName}</p>}
         <CharacterWizard campaignId={campaign ?? null} />
       </main>
     </div>

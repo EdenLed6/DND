@@ -47,7 +47,7 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
   }
 
   const TABS: [typeof tab, string][] = [
-    ["party", "🎭 קבוצה"], ["progress", "⬆ התקדמות"], ["loot", "💰 שלל וזהב"], ["rest", "🛏 מנוחה"], ["play", "⚔ קרבות ומפות"],
+    ["party", "🎭 Party"], ["progress", "⬆ Progression"], ["loot", "💰 Loot & Gold"], ["rest", "🛏 Rest"], ["play", "⚔ Combat & Maps"],
   ];
 
   return (
@@ -58,9 +58,9 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
           <div className="text-sm text-[#a9977c]">{campaign.description || "—"} · DM: {campaign.dmName}</div>
         </div>
         <div className="text-right text-sm">
-          <div>קוד הזמנה: <code className="text-gold">{campaign.inviteCode}</code></div>
-          <div className="text-[#a9977c]">{members.length} חברים · {party.length} דמויות</div>
-          {isDM ? <span className="chip mt-1">👑 DM</span> : <span className="chip mt-1">שחקן</span>}
+          <div>Invite Code: <code className="text-gold">{campaign.inviteCode}</code></div>
+          <div className="text-[#a9977c]">{members.length} members · {party.length} characters</div>
+          {isDM ? <span className="chip mt-1">👑 DM</span> : <span className="chip mt-1">Player</span>}
         </div>
       </div>
 
@@ -76,7 +76,7 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
           <table className="sheet min-w-[720px]">
             <thead><tr>
               {isDM && <th></th>}
-              <th>דמות</th><th>שחקן</th><th>מקצוע</th><th>רמה</th><th>HP</th><th>AC</th><th>PP</th><th>זהב</th><th>מצבים</th>{isDM && <th>DM</th>}
+              <th>Character</th><th>Player</th><th>Class</th><th>Level</th><th>HP</th><th>AC</th><th>PP</th><th>Gold</th><th>Conditions</th>{isDM && <th>DM</th>}
             </tr></thead>
             <tbody>
               {party.map((p) => (
@@ -98,11 +98,11 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
                   </td>}
                 </tr>
               ))}
-              {party.length === 0 && <tr><td colSpan={11} className="text-center text-[#a9977c]">אין דמויות. שחקנים מצטרפים עם קוד ההזמנה ויוצרים דמות.</td></tr>}
+              {party.length === 0 && <tr><td colSpan={11} className="text-center text-[#a9977c]">No characters yet. Players join with the invite code and create a character.</td></tr>}
             </tbody>
           </table>
           <div className="mt-3">
-            <Link href={`/characters/new?campaign=${campaign.id}`} className="btn-gold">🎭 צור דמות בקמפיין</Link>
+            <Link href={`/characters/new?campaign=${campaign.id}`} className="btn-gold">🎭 Create Character in Campaign</Link>
           </div>
         </div>
       )}
@@ -110,16 +110,16 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
       {/* PROGRESSION (DM) */}
       {tab === "progress" && isDM && (
         <div className="card space-y-3">
-          <h3 className="font-display text-gold">ניהול XP ורמות</h3>
-          <p className="text-sm text-[#a9977c]">{sel.length ? `${sel.length} דמויות נבחרו` : "כל הקבוצה"} (בחר בטאב הקבוצה כדי למקד)</p>
+          <h3 className="font-display text-gold">XP & Level Management</h3>
+          <p className="text-sm text-[#a9977c]">{sel.length ? `${sel.length} characters selected` : "Entire party"} (select in the Party tab to target)</p>
           <div className="flex flex-wrap gap-2">
-            <input className="input max-w-[140px]" placeholder="כמות XP" value={xpAmt} onChange={(e) => setXpAmt(e.target.value)} inputMode="numeric" />
-            <button className="btn-primary" disabled={busy} onClick={() => post(`/api/campaigns/${campaign.id}/xp`, { amount: parseInt(xpAmt) || 0, characterIds: sel.length ? sel : undefined })}>הענק XP</button>
+            <input className="input max-w-[140px]" placeholder="XP amount" value={xpAmt} onChange={(e) => setXpAmt(e.target.value)} inputMode="numeric" />
+            <button className="btn-primary" disabled={busy} onClick={() => post(`/api/campaigns/${campaign.id}/xp`, { amount: parseInt(xpAmt) || 0, characterIds: sel.length ? sel : undefined })}>Award XP</button>
             {[100, 500, 1000].map((v) => (
               <button key={v} className="btn-ghost" onClick={() => post(`/api/campaigns/${campaign.id}/xp`, { amount: v, characterIds: sel.length ? sel : undefined })}>+{v}</button>
             ))}
           </div>
-          <div className="text-sm text-[#a9977c]">עליית רמה: השתמש בכפתורי +L/−L בטאב הקבוצה, או הענק XP וסמן ⬆.</div>
+          <div className="text-sm text-[#a9977c]">Level up: use the +L/−L buttons in the Party tab, or award XP and watch for the ⬆ marker.</div>
         </div>
       )}
 
@@ -127,22 +127,22 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
       {tab === "loot" && (
         <div className="grid gap-4 md:grid-cols-2">
           <div className="card space-y-3">
-            <h3 className="font-display text-gold">זהב קבוצתי</h3>
+            <h3 className="font-display text-gold">Party Gold</h3>
             <div className="font-display text-2xl text-gold">{partyGold.pp}pp {partyGold.gp}gp {partyGold.sp}sp {partyGold.cp}cp</div>
             {isDM && (
               <div className="flex flex-wrap gap-2">
                 <input className="input max-w-[120px]" placeholder="gp" value={goldGp} onChange={(e) => setGoldGp(e.target.value)} inputMode="numeric" />
-                <button className="btn-gold" onClick={() => post(`/api/campaigns/${campaign.id}/gold`, { target: "party", deltaCp: (parseInt(goldGp) || 0) * 100 })}>+ הוסף</button>
-                <button className="btn-ghost" onClick={() => post(`/api/campaigns/${campaign.id}/gold`, { target: "party", deltaCp: -(parseInt(goldGp) || 0) * 100 })}>− הורד</button>
+                <button className="btn-gold" onClick={() => post(`/api/campaigns/${campaign.id}/gold`, { target: "party", deltaCp: (parseInt(goldGp) || 0) * 100 })}>+ Add</button>
+                <button className="btn-ghost" onClick={() => post(`/api/campaigns/${campaign.id}/gold`, { target: "party", deltaCp: -(parseInt(goldGp) || 0) * 100 })}>− Remove</button>
               </div>
             )}
             {isDM && party.length > 0 && (
               <div className="border-t border-[#241d17] pt-2 text-sm">
-                <div className="mb-1 text-[#a9977c]">חלק לשחקן (מהקופה):</div>
+                <div className="mb-1 text-[#a9977c]">Distribute to a player (from the pool):</div>
                 {party.map((p) => (
                   <div key={p.id} className="flex items-center justify-between py-0.5">
                     <span>{p.name}</span>
-                    <button className="btn-ghost !py-0.5" onClick={() => post(`/api/campaigns/${campaign.id}/gold`, { target: "character", characterId: p.id, deltaCp: (parseInt(goldGp) || 0) * 100, fromParty: true })}>תן {goldGp || 0}g</button>
+                    <button className="btn-ghost !py-0.5" onClick={() => post(`/api/campaigns/${campaign.id}/gold`, { target: "character", characterId: p.id, deltaCp: (parseInt(goldGp) || 0) * 100, fromParty: true })}>Give {goldGp || 0}g</button>
                   </div>
                 ))}
               </div>
@@ -150,14 +150,14 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
           </div>
 
           <div className="card space-y-3">
-            <h3 className="font-display text-gold">שלל הקבוצה</h3>
+            <h3 className="font-display text-gold">Party Loot</h3>
             {isDM && (
               <div className="flex gap-2">
-                <input className="input" placeholder="שם פריט" value={lootName} onChange={(e) => setLootName(e.target.value)} />
-                <button className="btn-gold" disabled={!lootName} onClick={() => { post(`/api/campaigns/${campaign.id}/loot`, { name: lootName }); setLootName(""); }}>הוסף</button>
+                <input className="input" placeholder="Item name" value={lootName} onChange={(e) => setLootName(e.target.value)} />
+                <button className="btn-gold" disabled={!lootName} onClick={() => { post(`/api/campaigns/${campaign.id}/loot`, { name: lootName }); setLootName(""); }}>Add</button>
               </div>
             )}
-            {loot.length === 0 ? <p className="text-sm text-[#a9977c]">אין שלל.</p> : (
+            {loot.length === 0 ? <p className="text-sm text-[#a9977c]">No loot.</p> : (
               <ul className="space-y-1 text-sm">
                 {loot.map((l) => (
                   <li key={l.id} className="flex items-center justify-between border-t border-[#241d17] py-1">
@@ -165,7 +165,7 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
                     {isDM && (
                       <div className="flex items-center gap-1">
                         <select className="input !py-0.5 !w-auto" defaultValue="" onChange={(e) => e.target.value && post(`/api/campaigns/${campaign.id}/loot`, { lootId: l.id, characterId: e.target.value }, "PATCH")}>
-                          <option value="">הקצה ל...</option>
+                          <option value="">Assign to...</option>
                           {party.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
                         <button className="btn-ghost !px-2 !py-0.5" onClick={() => post(`/api/campaigns/${campaign.id}/loot?lootId=${l.id}`, {}, "DELETE")}>🗑</button>
@@ -182,17 +182,17 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
       {/* REST (DM) */}
       {tab === "rest" && (
         <div className="card space-y-3">
-          <h3 className="font-display text-gold">מנוחה וחידוש</h3>
+          <h3 className="font-display text-gold">Rest & Recovery</h3>
           {isDM ? (
             <>
-              <p className="text-sm text-[#a9977c]">{sel.length ? `${sel.length} נבחרו` : "כל הקבוצה"}</p>
+              <p className="text-sm text-[#a9977c]">{sel.length ? `${sel.length} selected` : "Entire party"}</p>
               <div className="flex gap-2">
-                <button className="btn-ghost" disabled={busy} onClick={() => post(`/api/campaigns/${campaign.id}/rest`, { type: "SHORT", characterIds: sel.length ? sel : undefined })}>☕ מנוחה קצרה</button>
-                <button className="btn-primary" disabled={busy} onClick={() => post(`/api/campaigns/${campaign.id}/rest`, { type: "LONG", characterIds: sel.length ? sel : undefined })}>🌙 מנוחה ארוכה</button>
+                <button className="btn-ghost" disabled={busy} onClick={() => post(`/api/campaigns/${campaign.id}/rest`, { type: "SHORT", characterIds: sel.length ? sel : undefined })}>☕ Short Rest</button>
+                <button className="btn-primary" disabled={busy} onClick={() => post(`/api/campaigns/${campaign.id}/rest`, { type: "LONG", characterIds: sel.length ? sel : undefined })}>🌙 Long Rest</button>
               </div>
-              <p className="text-xs text-[#a9977c]">מנוחה ארוכה: HP מלא, החזרת קוביות פגיעה, כל משבצות הקסם, איפוס משאבים, exhaustion −1. קצרה: Pact slots + משאבי short-rest.</p>
+              <p className="text-xs text-[#a9977c]">Long Rest: full HP, half Hit Dice restored, all spell slots, resources reset, exhaustion −1. Short Rest: Pact slots + short-rest resources.</p>
             </>
-          ) : <p className="text-sm text-[#a9977c]">רק ה-DM מפעיל מנוחה קבוצתית.</p>}
+          ) : <p className="text-sm text-[#a9977c]">Only the DM can trigger a party rest.</p>}
         </div>
       )}
 
@@ -217,8 +217,8 @@ function PlayTab({ campaign, encounters, maps, isDM, onChange }: any) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <div className="card space-y-2">
-        <h3 className="font-display text-gold">קרבות (Encounters)</h3>
-        {encounters.length === 0 ? <p className="text-sm text-[#a9977c]">אין קרבות עדיין.</p> : (
+        <h3 className="font-display text-gold">Encounters</h3>
+        {encounters.length === 0 ? <p className="text-sm text-[#a9977c]">No encounters yet.</p> : (
           <ul className="space-y-1 text-sm">
             {encounters.map((e: any) => (
               <li key={e.id} className="flex justify-between border-t border-[#241d17] py-1">
@@ -230,17 +230,17 @@ function PlayTab({ campaign, encounters, maps, isDM, onChange }: any) {
         )}
         {isDM && (
           <div className="flex gap-2 pt-2">
-            <input className="input" placeholder="שם הקרב" value={name} onChange={(e) => setName(e.target.value)} />
-            <button className="btn-primary" onClick={createEncounter}>⚔ קרב חדש</button>
+            <input className="input" placeholder="Encounter name" value={name} onChange={(e) => setName(e.target.value)} />
+            <button className="btn-primary" onClick={createEncounter}>⚔ New Encounter</button>
           </div>
         )}
       </div>
       <div className="card space-y-2">
-        <h3 className="font-display text-gold">מפות</h3>
-        {maps.length === 0 ? <p className="text-sm text-[#a9977c]">אין מפות. הוסף בעת בניית קרב.</p> : (
+        <h3 className="font-display text-gold">Maps</h3>
+        {maps.length === 0 ? <p className="text-sm text-[#a9977c]">No maps. Add one while building an encounter.</p> : (
           <ul className="text-sm">{maps.map((m: any) => <li key={m.id} className="border-t border-[#241d17] py-1">{m.name}</li>)}</ul>
         )}
-        {isDM && <p className="text-xs text-[#a9977c]">מפות נוצרות ומחוברות בתוך מסך הקרב (בחר קרב → “מפה חדשה”).</p>}
+        {isDM && <p className="text-xs text-[#a9977c]">Maps are created and linked inside the encounter screen (select an encounter → “New Map”).</p>}
       </div>
     </div>
   );

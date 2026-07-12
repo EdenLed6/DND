@@ -18,7 +18,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { id: campaignId } = await params;
   const { user, res } = await requireUser();
   if (!user) return res!;
-  if (!(await isDM(user.id, campaignId))) return bad("רק ה-DM", 403);
+  if (!(await isDM(user.id, campaignId))) return bad("DM only", 403);
   const parsed = addSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return bad("Invalid input");
   const { srcMagicItemId, srcEquipmentId, ...rest } = parsed.data;
@@ -38,7 +38,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { id: campaignId } = await params;
   const { user, res } = await requireUser();
   if (!user) return res!;
-  if (!(await isDM(user.id, campaignId))) return bad("רק ה-DM", 403);
+  if (!(await isDM(user.id, campaignId))) return bad("DM only", 403);
   const parsed = assignSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return bad("Invalid input");
 
@@ -62,7 +62,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   const { id: campaignId } = await params;
   const { user, res } = await requireUser();
   if (!user) return res!;
-  if (!(await isDM(user.id, campaignId))) return bad("רק ה-DM", 403);
+  if (!(await isDM(user.id, campaignId))) return bad("DM only", 403);
   const { searchParams } = new URL(req.url);
   const lootId = searchParams.get("lootId");
   if (!lootId) return bad("lootId required");

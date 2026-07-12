@@ -30,30 +30,30 @@ export default function LoginPage() {
         <div className="mb-6 text-center">
           <div className="text-4xl">🐉</div>
           <h1 className="font-display text-2xl text-gold">D&D 5e Campaign Manager</h1>
-          <p className="text-sm text-[#a9977c]">ניהול קמפיינים · דמויות · קרבות חיים</p>
+          <p className="text-sm text-[#a9977c]">Campaign management · Characters · Live combat</p>
         </div>
         <div className="mb-4 flex gap-2">
-          <button className={mode === "login" ? "btn-gold flex-1" : "btn-ghost flex-1"} onClick={() => setMode("login")}>התחברות</button>
-          <button className={mode === "register" ? "btn-gold flex-1" : "btn-ghost flex-1"} onClick={() => setMode("register")}>הרשמה</button>
+          <button className={mode === "login" ? "btn-gold flex-1" : "btn-ghost flex-1"} onClick={() => setMode("login")}>Sign In</button>
+          <button className={mode === "register" ? "btn-gold flex-1" : "btn-ghost flex-1"} onClick={() => setMode("register")}>Sign Up</button>
         </div>
         <form onSubmit={submit} className="space-y-3">
           {mode === "register" && (
             <div>
-              <label className="label">שם תצוגה</label>
+              <label className="label">Display Name</label>
               <input className="input" value={displayName} onChange={(e) => setName(e.target.value)} required />
             </div>
           )}
           <div>
-            <label className="label">אימייל</label>
+            <label className="label">Email</label>
             <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
           <div>
-            <label className="label">סיסמה</label>
+            <label className="label">Password</label>
             <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
           </div>
           {error && <p className="text-sm text-red-400">{error}</p>}
           <button className="btn-primary w-full" disabled={busy}>
-            {busy ? "..." : mode === "login" ? "התחבר" : "הירשם"}
+            {busy ? "..." : mode === "login" ? "Sign In" : "Sign Up"}
           </button>
         </form>
       </div>

@@ -26,10 +26,10 @@ export function SpellManager({ characterId, spells, casterClass, canEdit }: {
   return (
     <div className="mt-3 border-t border-[#241d17] pt-2">
       <div className="mb-1 flex items-center justify-between">
-        <span className="text-sm text-[#a9977c]">קסמים ידועים ({spells.length})</span>
-        {canEdit && <button className="btn-ghost !py-0.5 text-xs" onClick={() => setShowAdd(true)}>+ הוסף קסם</button>}
+        <span className="text-sm text-[#a9977c]">Known Spells ({spells.length})</span>
+        {canEdit && <button className="btn-ghost !py-0.5 text-xs" onClick={() => setShowAdd(true)}>+ Add Spell</button>}
       </div>
-      {levels.length === 0 && <p className="text-xs text-[#a9977c]">אין קסמים. הוסף מרשימת המקצוע.</p>}
+      {levels.length === 0 && <p className="text-xs text-[#a9977c]">No spells. Add from the class list.</p>}
       {levels.map((lvl) => (
         <div key={lvl} className="mb-1">
           <div className="text-[10px] uppercase text-[#a9977c]">{lvl === 0 ? "Cantrips" : `Level ${lvl}`}</div>
@@ -81,26 +81,26 @@ function AddSpellModal({ characterId, casterClass, onClose }: { characterId: str
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div className="card w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-lg text-gold">הוסף קסם {casterClass && `(${casterClass})`}</h3>
-          <button className="btn-ghost !py-0.5" onClick={onClose}>סגור</button>
+          <h3 className="font-display text-lg text-gold">Add Spell {casterClass && `(${casterClass})`}</h3>
+          <button className="btn-ghost !py-0.5" onClick={onClose}>Close</button>
         </div>
         <div className="mb-2 flex flex-wrap gap-1">
-          <input className="input flex-1" placeholder="חיפוש..." value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} />
+          <input className="input flex-1" placeholder="Search..." value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} />
           <select className="input !w-auto" value={level} onChange={(e) => setLevel(e.target.value)}>
-            <option value="">כל הרמות</option>
+            <option value="">All Levels</option>
             {[0,1,2,3,4,5,6,7,8,9].map((l) => <option key={l} value={l}>{l === 0 ? "Cantrip" : `L${l}`}</option>)}
           </select>
-          <button className="btn-ghost" onClick={search}>חפש</button>
-          <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={filterClass} onChange={(e) => setFilterClass(e.target.checked)} />רק {casterClass}</label>
+          <button className="btn-ghost" onClick={search}>Search</button>
+          <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={filterClass} onChange={(e) => setFilterClass(e.target.checked)} />{casterClass} only</label>
         </div>
         <div className="max-h-72 space-y-1 overflow-y-auto text-sm">
           {rows.map((s) => (
             <div key={s.id} className="flex items-center justify-between border-b border-[#241d17] py-1">
               <span>{s.name} <span className="text-xs text-[#a9977c]">{s.level === 0 ? "Cantrip" : `L${s.level}`} · {s.school}</span></span>
-              <button className="btn-ghost !py-0.5" onClick={() => add(s.id)}>+ הוסף</button>
+              <button className="btn-ghost !py-0.5" onClick={() => add(s.id)}>+ Add</button>
             </div>
           ))}
-          {rows.length === 0 && <p className="text-[#a9977c]">אין תוצאות.</p>}
+          {rows.length === 0 && <p className="text-[#a9977c]">No results.</p>}
         </div>
       </div>
     </div>

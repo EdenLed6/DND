@@ -25,8 +25,8 @@ export function CompendiumList({ rows, tab }: { rows: any[]; tab: string }) {
       {detail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setDetail(null)}>
           <div className="card max-h-[85vh] w-full max-w-2xl overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            {loading || detail.__loading ? <p className="text-[#a9977c]">טוען...</p> : <DetailBody tab={tab} d={detail} />}
-            <button className="btn-ghost mt-3" onClick={() => setDetail(null)}>סגור</button>
+            {loading || detail.__loading ? <p className="text-[#a9977c]">Loading...</p> : <DetailBody tab={tab} d={detail} />}
+            <button className="btn-ghost mt-3" onClick={() => setDetail(null)}>Close</button>
           </div>
         </div>
       )}
@@ -35,7 +35,7 @@ export function CompendiumList({ rows, tab }: { rows: any[]; tab: string }) {
 }
 
 function DetailBody({ tab, d }: { tab: string; d: any }) {
-  if (!d) return <p>לא נמצא.</p>;
+  if (!d) return <p>Not found.</p>;
   const J = (s: any) => { try { return JSON.parse(s || "[]"); } catch { return []; } };
 
   if (tab === "spells") return (

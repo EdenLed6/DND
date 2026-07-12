@@ -15,15 +15,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { id: campaignId } = await params;
   const { user, res } = await requireUser();
   if (!user) return res!;
-  if (!(await isDM(user.id, campaignId))) return bad("רק ה-DM", 403);
+  if (!(await isDM(user.id, campaignId))) return bad("DM only", 403);
 
   const form = await req.formData().catch(() => null);
   if (!form) return bad("No form data");
   const file = form.get("file");
   if (!(file instanceof File)) return bad("No file");
-  if (file.size > MAX_BYTES) return bad("קובץ גדול מדי (מקס 8MB)");
+  if (file.size > MAX_BYTES) return bad("File too large (max 8MB)");
   const ext = EXT[file.type];
-  if (!ext) return bad("סוג קובץ לא נתמך (PNG/JPG/WEBP/GIF)");
+  if (!ext) return bad("Unsupported file type (PNG/JPG/WEBP/GIF)");
 
   const buf = Buffer.from(await file.arrayBuffer());
   const dir = path.join(process.cwd(), "public", "uploads");
