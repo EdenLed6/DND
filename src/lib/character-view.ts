@@ -1,6 +1,54 @@
 import { prisma } from "@/lib/db";
 import { derive, type CharacterInput, type CharClassInput, type ArmorInput } from "@/lib/dnd/character";
 import type { Ability } from "@/lib/dnd/rules";
+import { subclassFeaturesUpTo } from "@/lib/dnd/subclass-features";
+
+export interface FeatureGroup { source: string; items: { level?: number; name: string; description: string }[]; }
+
+/** All features a character has: race, class (by level), subclass (by level), feats, background. */
+async function resolveFeatures(character: any): Promise<FeatureGroup[]> {
+  const groups: FeatureGroup[] = [];
+
+  // Race traits
+  const race = await prisma.srdRace.findFirst({ where: { name: character.raceId } });
+  if (race?.traits) {
+    try {
+      const traits = JSON.parse(race.traits);
+      if (traits.length) groups.push({ source: `Race: ${character.raceId}`, items: traits });
+    } catch {}
+  }
+
+  // Class + subclass features
+  for (const cls of character.classes) {
+    const srdClass = await prisma.srdClass.findFirst({ where: { name: cls.classId } });
+    const items: { level: number; name: string; description: string }[] = [];
+    if (srdClass?.features) {
+      try {
+        const feats = JSON.parse(srdClass.features) as { level: number; name: string; description: string }[];
+        items.push(...feats.filter((f) => f.level <= cls.level));
+      } catch {}
+    }
+    for (const sf of subclassFeaturesUpTo(cls.subclass, cls.level)) items.push(sf);
+    items.sort((a, b) => a.level - b.level);
+    const label = cls.subclass ? `${cls.classId} (${cls.subclass}) ${cls.level}` : `${cls.classId} ${cls.level}`;
+    if (items.length) groups.push({ source: label, items });
+  }
+
+  // Feats (stored)
+  try {
+    const stored = JSON.parse(character.featuresJson || "[]");
+    const feats = stored.filter((f: any) => f?.type === "feat" || f?.name);
+    if (feats.length) groups.push({ source: "Feats", items: feats.map((f: any) => ({ name: f.name, description: f.description ?? "" })) });
+  } catch {}
+
+  // Background feature
+  if (character.background) {
+    const bg = await prisma.srdBackground.findFirst({ where: { name: character.background } });
+    if (bg?.featureName) groups.push({ source: `Background: ${character.background}`, items: [{ name: bg.featureName, description: bg.featureDesc ?? "" }] });
+  }
+
+  return groups;
+}
 
 export async function loadCharacterView(id: string) {
   const character = await prisma.character.findUnique({
@@ -69,7 +117,8 @@ export async function loadCharacterView(id: string) {
     }).filter(Boolean).sort((a: any, b: any) => a.level - b.level || a.name.localeCompare(b.name));
   }
 
-  return { character, derived: derive(input), spellDetails };
+  const features = await resolveFeatures(character);
+  return { character, derived: derive(input), spellDetails, features };
 }
 
 function safeJson<T>(s: string | null | undefined, fallback: T): T {

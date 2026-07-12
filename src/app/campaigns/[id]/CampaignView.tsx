@@ -72,35 +72,69 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
 
       {/* PARTY */}
       {tab === "party" && (
-        <div className="card overflow-x-auto">
-          <table className="sheet min-w-[720px]">
-            <thead><tr>
-              {isDM && <th></th>}
-              <th>Character</th><th>Player</th><th>Class</th><th>Level</th><th>HP</th><th>AC</th><th>PP</th><th>Gold</th><th>Conditions</th>{isDM && <th>DM</th>}
-            </tr></thead>
-            <tbody>
-              {party.map((p) => (
-                <tr key={p.id}>
-                  {isDM && <td><input type="checkbox" checked={sel.includes(p.id)} onChange={(e) => setSel((s) => e.target.checked ? [...s, p.id] : s.filter((x) => x !== p.id))} /></td>}
-                  <td><Link href={`/characters/${p.id}`} className="text-gold hover:underline">{p.name}</Link></td>
-                  <td className="text-[#a9977c]">{p.owner}</td>
-                  <td>{p.race} · {p.classes}</td>
-                  <td>{p.level}{p.canLevelUp && <span className="ml-1 text-green-400" title="level-up available">⬆</span>}</td>
-                  <td className={p.hp === 0 ? "text-red-400" : ""}>{p.hp}/{p.maxHp}</td>
-                  <td>{p.ac}</td><td>{p.pp}</td>
-                  <td>{fromCopper(p.gold).gp}g</td>
-                  <td className="text-xs">{p.conditions.join(", ") || "—"}</td>
-                  {isDM && <td>
-                    <div className="flex gap-1">
-                      <button className="btn-ghost !px-2 !py-0.5" title="Level up" onClick={() => post(`/api/characters/${p.id}/level`, { delta: 1 })}>+L</button>
-                      <button className="btn-ghost !px-2 !py-0.5" title="Level down" onClick={() => post(`/api/characters/${p.id}/level`, { delta: -1 })}>−L</button>
-                    </div>
-                  </td>}
-                </tr>
-              ))}
-              {party.length === 0 && <tr><td colSpan={11} className="text-center text-[#a9977c]">No characters yet. Players join with the invite code and create a character.</td></tr>}
-            </tbody>
-          </table>
+        <div className="card">
+          {party.length === 0 && <p className="muted text-center text-sm">No characters yet. Players join with the invite code and create a character.</p>}
+
+          {/* Mobile: cards */}
+          <div className="space-y-2 sm:hidden">
+            {party.map((p) => (
+              <div key={p.id} className="panel-inset p-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <Link href={`/characters/${p.id}`} className="link-gold font-display text-base">{p.name}</Link>
+                    <div className="muted text-xs">{p.owner} · {p.race} · {p.classes}</div>
+                  </div>
+                  {isDM && <input type="checkbox" className="mt-1 h-5 w-5" checked={sel.includes(p.id)} onChange={(e) => setSel((s) => e.target.checked ? [...s, p.id] : s.filter((x) => x !== p.id))} />}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1 text-xs">
+                  <span className="chip">Lvl {p.level}{p.canLevelUp && " ⬆"}</span>
+                  <span className={`chip ${p.hp === 0 ? "text-red-400" : ""}`}>HP {p.hp}/{p.maxHp}</span>
+                  <span className="chip">AC {p.ac}</span>
+                  <span className="chip">PP {p.pp}</span>
+                  <span className="chip">{fromCopper(p.gold).gp}g</span>
+                  {p.conditions.length > 0 && <span className="chip text-[#d1a000]">{p.conditions.join(", ")}</span>}
+                </div>
+                {isDM && (
+                  <div className="mt-2 flex gap-2">
+                    <button className="btn-ghost flex-1 !py-1" onClick={() => post(`/api/characters/${p.id}/level`, { delta: 1 })}>+ Level</button>
+                    <button className="btn-ghost flex-1 !py-1" onClick={() => post(`/api/characters/${p.id}/level`, { delta: -1 })}>− Level</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden scroll-x sm:block">
+            <table className="sheet min-w-[720px]">
+              <thead><tr>
+                {isDM && <th></th>}
+                <th>Character</th><th>Player</th><th>Class</th><th>Level</th><th>HP</th><th>AC</th><th>PP</th><th>Gold</th><th>Conditions</th>{isDM && <th>DM</th>}
+              </tr></thead>
+              <tbody>
+                {party.map((p) => (
+                  <tr key={p.id}>
+                    {isDM && <td><input type="checkbox" checked={sel.includes(p.id)} onChange={(e) => setSel((s) => e.target.checked ? [...s, p.id] : s.filter((x) => x !== p.id))} /></td>}
+                    <td><Link href={`/characters/${p.id}`} className="text-gold hover:underline">{p.name}</Link></td>
+                    <td className="text-[#a9977c]">{p.owner}</td>
+                    <td>{p.race} · {p.classes}</td>
+                    <td>{p.level}{p.canLevelUp && <span className="ml-1 text-green-400" title="level-up available">⬆</span>}</td>
+                    <td className={p.hp === 0 ? "text-red-400" : ""}>{p.hp}/{p.maxHp}</td>
+                    <td>{p.ac}</td><td>{p.pp}</td>
+                    <td>{fromCopper(p.gold).gp}g</td>
+                    <td className="text-xs">{p.conditions.join(", ") || "—"}</td>
+                    {isDM && <td>
+                      <div className="flex gap-1">
+                        <button className="btn-ghost !px-2 !py-0.5" title="Level up" onClick={() => post(`/api/characters/${p.id}/level`, { delta: 1 })}>+L</button>
+                        <button className="btn-ghost !px-2 !py-0.5" title="Level down" onClick={() => post(`/api/characters/${p.id}/level`, { delta: -1 })}>−L</button>
+                      </div>
+                    </td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
           <div className="mt-3">
             <Link href={`/characters/new?campaign=${campaign.id}`} className="btn-gold">🎭 Create Character in Campaign</Link>
           </div>

@@ -1,25 +1,44 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 export function TopNav({ user }: { user: { displayName: string } }) {
   const router = useRouter();
+  const pathname = usePathname();
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login"); router.refresh();
   }
+  const active = (href: string) => pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+
   return (
-    <header className="flex items-center justify-between border-b border-[#3a2f24] bg-[#17130f] px-4 py-3">
-      <Link href="/dashboard" className="flex items-center gap-2 font-display text-lg text-gold">
-        🐉 <span>Campaign Manager</span>
-      </Link>
-      <nav className="flex items-center gap-3 text-sm">
-        <Link href="/dashboard" className="text-parchment hover:text-gold">Dashboard</Link>
-        <Link href="/compendium" className="text-parchment hover:text-gold">Compendium</Link>
-        <span className="text-[#a9977c]">·</span>
-        <span className="text-[#a9977c]">{user.displayName}</span>
-        <button onClick={logout} className="btn-ghost">Sign Out</button>
+    <>
+      {/* Top bar */}
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[#3a2f24] bg-[#17130f]/95 px-4 py-3 backdrop-blur"
+        style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}>
+        <Link href="/dashboard" className="flex items-center gap-2 font-display text-lg text-gold">
+          🐉 <span className="hidden sm:inline">Campaign Manager</span>
+        </Link>
+        <nav className="flex items-center gap-3 text-sm">
+          <Link href="/dashboard" className="hidden text-parchment hover:text-gold sm:inline">Dashboard</Link>
+          <Link href="/compendium" className="hidden text-parchment hover:text-gold sm:inline">Compendium</Link>
+          <span className="muted hidden max-w-[10rem] truncate sm:inline">{user.displayName}</span>
+          <button onClick={logout} className="btn-ghost">Sign Out</button>
+        </nav>
+      </header>
+
+      {/* Mobile bottom nav */}
+      <nav className="bottom-nav sm:hidden" aria-label="Primary">
+        <Link href="/dashboard" data-active={active("/dashboard")}>
+          <span className="ico">🏠</span><span>Home</span>
+        </Link>
+        <Link href="/characters/new" data-active={active("/characters/new")}>
+          <span className="ico">🎭</span><span>New</span>
+        </Link>
+        <Link href="/compendium" data-active={active("/compendium")}>
+          <span className="ico">📚</span><span>Compendium</span>
+        </Link>
       </nav>
-    </header>
+    </>
   );
 }

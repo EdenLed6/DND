@@ -2,47 +2,190 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   Design tokens — dark-fantasy "grimoire" theme
+   ============================================================ */
 :root {
   color-scheme: dark;
+  --bg: #120f0d;
+  --bg-2: #18130f;
+  --panel: #1c1712;
+  --panel-2: #221b15;
+  --line: #3a2f24;
+  --line-soft: #2a2119;
+  --ink: #ece5d8;
+  --ink-dim: #a9977c;
+  --ink-faint: #7d6f5c;
+  --gold: #c9a227;
+  --gold-bright: #e6c04a;
+  --blood: #8b2020;
+  --blood-bright: #a83232;
+  --arcane: #6a5aa0;
+  --forest: #3a5a3a;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 10px 30px rgba(0,0,0,.45);
+  --tap: 44px; /* min touch target */
 }
+
+* { -webkit-tap-highlight-color: transparent; }
+
+html { -webkit-text-size-adjust: 100%; }
 
 body {
-  background: #14110f;
-  color: #ece5d8;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background:
+    radial-gradient(1200px 800px at 80% -10%, rgba(106,90,160,.10), transparent 60%),
+    radial-gradient(1000px 700px at -10% 110%, rgba(139,32,32,.10), transparent 55%),
+    var(--bg);
+  color: var(--ink);
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  min-height: 100dvh;
 }
 
-.parchment-panel {
-  background: linear-gradient(180deg, #201b16, #17130f);
-  border: 1px solid #3a2f24;
-  border-radius: 0.5rem;
+.font-display { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif; letter-spacing: .2px; }
+
+/* Accessible focus ring everywhere */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+  border-radius: 6px;
 }
+
+/* ============================================================
+   Surfaces
+   ============================================================ */
+.parchment-panel, .card {
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.card { padding: 1rem; box-shadow: var(--shadow); }
+@media (max-width: 640px) { .card { padding: .85rem; border-radius: var(--radius-sm); } }
+
+.panel-inset { background: #0f0c0a; border: 1px solid var(--line-soft); border-radius: var(--radius-sm); }
 
 .stat-box {
-  @apply flex flex-col items-center justify-center rounded-lg border border-[#3a2f24] bg-[#1b1613] px-3 py-2;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border-radius: var(--radius-sm); border: 1px solid var(--line);
+  background: linear-gradient(180deg, #201a15, #17120e);
+  padding: .5rem .5rem;
 }
 
+.hairline { border-top: 1px solid var(--line-soft); }
+
+/* ============================================================
+   Buttons — min 44px touch target, clear states
+   ============================================================ */
 .btn {
-  @apply inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium transition;
+  display: inline-flex; align-items: center; justify-content: center; gap: .35rem;
+  min-height: var(--tap); padding: .5rem .9rem;
+  border-radius: var(--radius-sm); font-size: .9rem; font-weight: 600;
+  transition: transform .04s ease, background .15s ease, border-color .15s ease, filter .15s ease;
+  cursor: pointer; user-select: none; line-height: 1; white-space: nowrap;
 }
-.btn-primary { @apply btn bg-blood text-white hover:bg-red-800; }
-.btn-ghost { @apply btn border border-[#3a2f24] text-parchment hover:bg-[#241d17]; }
-.btn-gold { @apply btn bg-gold text-black hover:brightness-110; }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
 
+.btn-primary { composes: btn; }
+.btn-primary { background: linear-gradient(180deg, var(--blood-bright), var(--blood)); color: #fff; border: 1px solid #5e1515; }
+.btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+
+.btn-gold { background: linear-gradient(180deg, var(--gold-bright), var(--gold)); color: #1a1206; border: 1px solid #8a6d14; }
+.btn-gold:hover:not(:disabled) { filter: brightness(1.06); }
+
+.btn-ghost { background: rgba(255,255,255,.02); border: 1px solid var(--line); color: var(--ink); }
+.btn-ghost:hover:not(:disabled) { background: rgba(255,255,255,.06); border-color: var(--gold); }
+
+/* allow small dense buttons in toolbars while keeping desktop tidy */
+.btn-primary, .btn-gold, .btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: .35rem;
+  min-height: var(--tap); padding: .5rem .9rem; border-radius: var(--radius-sm); font-size: .9rem; font-weight: 600;
+  transition: transform .04s ease, filter .15s ease, background .15s ease, border-color .15s ease; cursor: pointer; white-space: nowrap; }
+.btn-primary:active, .btn-gold:active, .btn-ghost:active { transform: translateY(1px); }
+.btn-primary:disabled, .btn-gold:disabled, .btn-ghost:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ============================================================
+   Inputs
+   ============================================================ */
 .input {
-  @apply w-full rounded-md border border-[#3a2f24] bg-[#0f0c0a] px-3 py-2 text-parchment outline-none focus:border-gold;
+  width: 100%; min-height: var(--tap);
+  border-radius: var(--radius-sm); border: 1px solid var(--line);
+  background: #0f0c0a; color: var(--ink); padding: .55rem .7rem; outline: none;
+  font-size: 16px; /* prevents iOS zoom-on-focus */
 }
-.label { @apply block text-xs uppercase tracking-wide text-[#a9977c] mb-1; }
+.input:focus { border-color: var(--gold); }
+.label { display: block; font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-dim); margin-bottom: .3rem; }
 
-.card { @apply parchment-panel p-4; }
-.chip { @apply inline-flex items-center rounded-full border border-[#3a2f24] bg-[#1b1613] px-2 py-0.5 text-xs; }
+.chip {
+  display: inline-flex; align-items: center; gap: .25rem;
+  border-radius: 999px; border: 1px solid var(--line); background: #1b1613;
+  padding: .12rem .55rem; font-size: .72rem; color: var(--ink);
+}
+.chip-gold { background: rgba(201,162,39,.15); border-color: var(--gold); color: var(--gold-bright); }
 
-table.sheet { @apply w-full text-sm; }
-table.sheet th { @apply text-left text-[#a9977c] font-normal px-2 py-1; }
-table.sheet td { @apply px-2 py-1 border-t border-[#241d17]; }
+/* ============================================================
+   Tabs / segmented control
+   ============================================================ */
+.tabbar { display: flex; gap: .35rem; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.tabbar::-webkit-scrollbar { display: none; }
+.tab {
+  flex: 0 0 auto; min-height: 40px; padding: .45rem .8rem; border-radius: 999px;
+  border: 1px solid var(--line); background: rgba(255,255,255,.02); color: var(--ink-dim);
+  font-size: .85rem; font-weight: 600; cursor: pointer;
+}
+.tab[data-active="true"] { background: linear-gradient(180deg, var(--gold-bright), var(--gold)); color: #1a1206; border-color: #8a6d14; }
 
-/* Battle grid */
+/* ============================================================
+   Tables that collapse to cards on mobile
+   ============================================================ */
+table.sheet { width: 100%; font-size: .875rem; border-collapse: collapse; }
+table.sheet th { text-align: left; color: var(--ink-dim); font-weight: 500; padding: .3rem .5rem; }
+table.sheet td { padding: .3rem .5rem; border-top: 1px solid var(--line-soft); }
+
+/* ============================================================
+   Bottom navigation (mobile) + safe areas
+   ============================================================ */
+.bottom-nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  display: flex; justify-content: space-around; align-items: stretch;
+  background: rgba(20,16,13,.96); backdrop-filter: blur(8px);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.bottom-nav a {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-height: 56px; font-size: .68rem; color: var(--ink-dim); text-decoration: none;
+}
+.bottom-nav a[data-active="true"] { color: var(--gold-bright); }
+.bottom-nav .ico { font-size: 1.2rem; line-height: 1; }
+.has-bottom-nav { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+/* Ensure page content clears the mobile bottom nav */
+@media (max-width: 640px) { main { padding-bottom: calc(76px + env(safe-area-inset-bottom)); } }
+
+/* ============================================================
+   Modal / bottom-sheet
+   ============================================================ */
+.overlay { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.65); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.modal { width: 100%; max-width: 34rem; max-height: 88vh; overflow-y: auto; }
+@media (max-width: 640px) {
+  .overlay { align-items: flex-end; padding: 0; }
+  .modal { max-width: 100%; max-height: 90vh; border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding-bottom: calc(1rem + env(safe-area-inset-bottom)); }
+}
+
+/* ============================================================
+   Battle grid
+   ============================================================ */
 .grid-overlay {
   background-image: linear-gradient(rgba(255,255,255,.12) 1px, transparent 1px),
                     linear-gradient(90deg, rgba(255,255,255,.12) 1px, transparent 1px);
 }
+
+/* HP / progress bars */
+.meter { height: .5rem; border-radius: 999px; background: #0f0c0a; overflow: hidden; }
+.meter > span { display: block; height: 100%; border-radius: 999px; }
+
+/* Utility */
+.muted { color: var(--ink-dim); }
+.faint { color: var(--ink-faint); }
+.link-gold { color: var(--gold-bright); }
+.link-gold:hover { text-decoration: underline; }
+.scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }

@@ -11,8 +11,8 @@ import { LevelUpWizard } from "./LevelUpWizard";
 
 const CONDITIONS = ["Blinded","Charmed","Deafened","Frightened","Grappled","Incapacitated","Invisible","Paralyzed","Petrified","Poisoned","Prone","Restrained","Stunned","Unconscious"];
 
-export function CharacterSheet({ initialCharacter, derived, spellDetails, canEdit, isDM }: {
-  initialCharacter: any; derived: DerivedCharacter; spellDetails: any[]; canEdit: boolean; isDM: boolean;
+export function CharacterSheet({ initialCharacter, derived, spellDetails, features, canEdit, isDM }: {
+  initialCharacter: any; derived: DerivedCharacter; spellDetails: any[]; features: any[]; canEdit: boolean; isDM: boolean;
 }) {
   const router = useRouter();
   const [c, setC] = useState(initialCharacter);
@@ -52,10 +52,18 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, canEdi
     <main className="mx-auto max-w-6xl space-y-4 p-4">
       {/* Header */}
       <div className="card flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl text-gold">{c.name}</h1>
-          <div className="text-sm text-[#a9977c]">
-            {c.raceId}{c.subrace ? ` (${c.subrace})` : ""} · {c.classes.map((cl: any) => `${cl.classId} ${cl.level}`).join(" / ")} · {c.background} · {c.alignment}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => { if (!canEdit) return; const url = window.prompt("Avatar image URL (blank to clear):", c.avatarUrl ?? ""); if (url !== null) patch({ avatarUrl: url || null }); }}
+            className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#3a2f24] bg-[#0f0c0a] text-2xl"
+            title={canEdit ? "Set avatar" : undefined} aria-label="Avatar">
+            {c.avatarUrl ? <img src={c.avatarUrl} alt="" className="h-full w-full object-cover" /> : "🧙"}
+          </button>
+          <div>
+            <h1 className="font-display text-2xl text-gold">{c.name}</h1>
+            <div className="text-sm text-[#a9977c]">
+              {c.raceId}{c.subrace ? ` (${c.subrace})` : ""} · {c.classes.map((cl: any) => `${cl.classId} ${cl.level}${cl.subclass ? ` (${cl.subclass})` : ""}`).join(" / ")} · {c.background} · {c.alignment}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -236,6 +244,28 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, canEdi
           <InventoryManager characterId={c.id} items={c.items} canEdit={canEdit} carryCapacity={derived.carryCapacity} />
         </div>
       </div>
+
+      {/* Features & Traits */}
+      <div className="card">
+        <h3 className="mb-2 font-display text-gold">Features & Traits</h3>
+        {features.length === 0 ? <p className="muted text-sm">No features yet.</p> : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {features.map((g) => (
+              <div key={g.source} className="panel-inset p-3">
+                <div className="mb-1 text-xs uppercase tracking-wide text-gold">{g.source}</div>
+                <ul className="space-y-1 text-sm">
+                  {g.items.map((it: any, i: number) => (
+                    <li key={i}>
+                      <b>{it.level ? `L${it.level} · ` : ""}{it.name}.</b> <span className="muted">{it.description}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {isDM && <div className="text-center text-xs text-[#a9977c]">👑 DM Mode — you have full control over this character</div>}
     </main>
   );

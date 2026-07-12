@@ -16,6 +16,7 @@ const patchSchema = z.object({
   conditions: z.array(z.string()).optional(),
   concentration: z.string().nullable().optional(),
   inspiration: z.boolean().optional(),
+  avatarUrl: z.string().nullable().optional(),
   xp: z.number().int().min(0).optional(),
   cp: z.number().int().min(0).optional(),
   sp: z.number().int().min(0).optional(),

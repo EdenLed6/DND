@@ -26,6 +26,7 @@ export default async function CharacterPage({ params }: { params: Promise<{ id: 
         initialCharacter={serialize(view.character)}
         derived={view.derived}
         spellDetails={serialize(view.spellDetails ?? [])}
+        features={serialize(view.features ?? [])}
         canEdit={canEdit}
         isDM={isDM}
       />
