@@ -6,9 +6,12 @@
 > **Status:** ✅ עובד מקצה-לקצה — שלושת העמודים + כל ה-Polish (M1–M7).
 > תכנון מלא (מוח D&D) ב-`docs/`. מנוע חוקים עם 15 בדיקות עוברות. Build production תקין.
 >
-> כולל: אשף+גיליון דמות חי · ניהול ציוד וקסמים מהקומפנדיום · ייצוא/ייבוא JSON ·
-> לוח DM (XP/רמות/זהב/שלל/מנוחה) · קרב חי עם טוקנים נגררים, גלגולי תקיפה, יומן ·
-> 63 מפות SVG + העלאת מפות · **fog of war** · קומפנדיום SRD מלא עם דפי פרטים.
+> Includes: live character wizard + sheet · level-up wizard (HP/ASI/feat/subclass/
+> multiclass) · inventory & spell management from the compendium · JSON export/import ·
+> DM board (XP/levels/gold/loot/rest) · live combat with draggable tokens & avatars,
+> attack rolls, initiative, combat log · distance ruler & AoE templates · 63 SVG maps
+> + map upload · **fog of war** · full SRD compendium with detail pages.
+> UI is English.
 
 ## שלושת העמודים
 1. **ניהול דמות** — יצירה מונחית-SRD + גיליון מלא (סטטים, HP/AC/הצלות, קסמים

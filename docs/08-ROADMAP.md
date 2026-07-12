@@ -52,12 +52,16 @@
 - ✅ ניהול קסמים בגיליון + מודל פרטים בקומפנדיום
 - ⬜ נגישות + מובייל · i18n מלא (עברית/אנגלית) — עתידי
 
-## Milestone 8 — Future / עתידי
-- ⬜ i18n מלא (החלפת שפה), נגישות מלאה, אופטימיזציה למובייל
-- ⬜ ASI/feat wizard בעליית רמה, multiclass UI מלא
-- ⬜ subclass features אוטומטיים לפי רמה
-- ⬜ תמונות/אווטארים לטוקנים, מדידת מרחק על המפה, AoE templates
-- ⬜ מעבר ל-Postgres + Pusher/Ably לפריסת serverless
+## Milestone 8 — Advanced ✅ (mostly)
+- ✅ English UI throughout (app is English-only)
+- ✅ Level-up wizard: HP (average/roll/max), ASI or feat, subclass selection,
+     multiclass with ability prerequisites
+- ✅ Token avatars/images, distance ruler (5ft), AoE templates (circle/square/
+     cone/line)
+- ⬜ Automatic subclass feature grants by level (currently subclass is recorded;
+     feature text not auto-applied) — future
+- ⬜ Accessibility polish + full mobile layout — future
+- ⬜ Optional: Postgres + Pusher/Ably for serverless deployment — future infra
 
 ## Build Order Rationale / הגיון סדר הבנייה
 תשתית → מנוע חוקים (הכל תלוי בו) → קומפנדיום (נתונים לצפייה) → דמות (הליבה
