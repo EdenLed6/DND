@@ -11,3 +11,7 @@ prisma/dev.db-journal
 .DS_Store
 *.tsbuildinfo
 next-env.d.ts
+
+# uploaded maps (keep dir)
+public/uploads/*
+!public/uploads/.gitkeep

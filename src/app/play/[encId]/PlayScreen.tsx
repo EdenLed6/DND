@@ -161,19 +161,40 @@ function TokenView({ token, combatant, gridSize, draggable, dm }: any) {
 function MapControls({ maps, campaignId, onSetMap, onMapsChanged, current }: any) {
   const [name, setName] = useState(""); const [url, setUrl] = useState("");
   const [cols, setCols] = useState(20); const [rows, setRows] = useState(14);
+  const [showLib, setShowLib] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
   async function create() {
     const r = await fetch(`/api/campaigns/${campaignId}/maps`, { method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: name || "Map", imageUrl: url, gridCols: cols, gridRows: rows }) });
     const m = await r.json();
     await onSetMap?.(m.id); onMapsChanged?.(); setName(""); setUrl("");
   }
+  async function fromLibrary(presetId: string) {
+    const r = await fetch(`/api/campaigns/${campaignId}/maps/from-library`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ presetId }) });
+    const m = await r.json();
+    await onSetMap?.(m.id); onMapsChanged?.(); setShowLib(false);
+  }
+  async function upload(file: File) {
+    setUploading(true);
+    const fd = new FormData(); fd.append("file", file); fd.append("name", file.name.replace(/\.[^.]+$/, ""));
+    fd.append("gridCols", String(cols)); fd.append("gridRows", String(rows));
+    const r = await fetch(`/api/campaigns/${campaignId}/maps/upload`, { method: "POST", body: fd });
+    setUploading(false);
+    if (r.ok) { const m = await r.json(); await onSetMap?.(m.id); onMapsChanged?.(); }
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
       <select className="input !w-auto" value={current ?? ""} onChange={(e) => onSetMap?.(e.target.value)}>
         <option value="">— בחר מפה —</option>
         {maps.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
       </select>
-      <details><summary className="cursor-pointer text-gold">+ מפה חדשה</summary>
+      <button className="btn-gold" onClick={() => setShowLib(true)}>📚 ספריית מפות</button>
+      <label className="btn-ghost cursor-pointer">{uploading ? "מעלה..." : "⬆ העלה מפה"}
+        <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
+      </label>
+      <details><summary className="cursor-pointer text-gold">+ רשת/URL</summary>
         <div className="mt-2 flex flex-wrap gap-1">
           <input className="input !w-28" placeholder="שם" value={name} onChange={(e) => setName(e.target.value)} />
           <input className="input !w-56" placeholder="URL תמונה (אופציונלי)" value={url} onChange={(e) => setUrl(e.target.value)} />
@@ -182,6 +203,35 @@ function MapControls({ maps, campaignId, onSetMap, onMapsChanged, current }: any
           <button className="btn-gold" onClick={create}>צור</button>
         </div>
       </details>
+      {showLib && <MapLibraryModal onPick={fromLibrary} onClose={() => setShowLib(false)} />}
+    </div>
+  );
+}
+
+function MapLibraryModal({ onPick, onClose }: { onPick: (id: string) => void; onClose: () => void }) {
+  const [presets, setPresets] = useState<any[]>([]);
+  useEffect(() => { fetch("/api/maps/library").then((r) => r.json()).then(setPresets); }, []);
+  const cats = [...new Set(presets.map((p) => p.category))];
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <div className="card max-h-[85vh] w-full max-w-2xl overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="font-display text-lg text-gold">ספריית מפות ({presets.length})</h3>
+          <button className="btn-ghost !py-0.5" onClick={onClose}>סגור</button>
+        </div>
+        {cats.map((cat) => (
+          <div key={cat} className="mb-3">
+            <div className="mb-1 text-xs uppercase text-[#a9977c]">{presets.find((p) => p.category === cat)?.icon} {cat}</div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {presets.filter((p) => p.category === cat).map((p) => (
+                <button key={p.id} className="btn-ghost justify-start !py-1 text-xs" onClick={() => onPick(p.id)}>
+                  {p.icon} {p.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
