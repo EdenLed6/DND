@@ -39,7 +39,7 @@ export default function LoginPage() {
     });
     setBusy(false);
     if (!res.ok) { setError((await res.json()).error ?? "Something went wrong"); return; }
-    router.push("/dashboard"); router.refresh();
+    router.push("/portal"); router.refresh();
   }
 
   return (

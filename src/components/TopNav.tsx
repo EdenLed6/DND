@@ -1,15 +1,14 @@
 "use client";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { PlayerNav } from "@/components/PlayerNav";
 
 export function TopNav({ user }: { user: { displayName: string } }) {
   const router = useRouter();
-  const pathname = usePathname();
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login"); router.refresh();
   }
-  const active = (href: string) => pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
 
   return (
     <>
@@ -23,22 +22,13 @@ export function TopNav({ user }: { user: { displayName: string } }) {
           <Link href="/dashboard" className="hidden text-ink hover:text-gold sm:inline">Dashboard</Link>
           <Link href="/compendium" className="hidden text-ink hover:text-gold sm:inline">Compendium</Link>
           <span className="muted hidden max-w-[10rem] truncate sm:inline">{user.displayName}</span>
+          <Link href="/portal?choose=1" className="muted hidden text-xs hover:text-gold sm:inline">Switch Portal</Link>
           <button onClick={logout} className="btn-ghost">Sign Out</button>
         </nav>
       </header>
 
-      {/* Mobile bottom nav */}
-      <nav className="bottom-nav sm:hidden" aria-label="Primary">
-        <Link href="/dashboard" data-active={active("/dashboard")}>
-          <span className="ico">🏠</span><span>Home</span>
-        </Link>
-        <Link href="/characters/new" data-active={active("/characters/new")}>
-          <span className="ico">🎭</span><span>New</span>
-        </Link>
-        <Link href="/compendium" data-active={active("/compendium")}>
-          <span className="ico">📚</span><span>Compendium</span>
-        </Link>
-      </nav>
+      {/* Mobile bottom nav (Player Portal) */}
+      <PlayerNav />
     </>
   );
 }

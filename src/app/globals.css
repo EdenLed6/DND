@@ -37,9 +37,12 @@
   --warning: #b98338;
   --danger: #a33f3f;
   --font-ui: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --radius: 10px;
-  --radius-sm: 7px;
-  --shadow: 0 1px 2px rgba(85, 32, 37, .08), 0 8px 22px rgba(85, 32, 37, .08);
+  /* Wayward Realms DS tokens: radius sm/md/lg = 8/12/18, shadow soft/float. */
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 18px;
+  --shadow: 0 8px 24px rgba(62, 43, 23, .08);
+  --shadow-float: 0 16px 40px rgba(62, 43, 23, .18);
   --tap: 44px; /* min touch target */
 }
 
@@ -51,10 +54,12 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.05'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E"),
-    radial-gradient(1100px 700px at 85% -5%, rgba(178, 141, 78, .14), transparent 60%),
-    radial-gradient(900px 650px at -10% 105%, rgba(138, 32, 24, .07), transparent 55%),
-    radial-gradient(1400px 900px at 50% 40%, rgba(255, 252, 240, .55), transparent 70%),
+    radial-gradient(1100px 700px at 85% -5%, rgba(181, 138, 66, .10), transparent 60%),
+    radial-gradient(1400px 900px at 15% 12%, rgba(255, 255, 255, .55), transparent 70%),
+    linear-gradient(rgba(104, 77, 43, .028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(104, 77, 43, .024) 1px, transparent 1px),
     var(--bg);
+  background-size: auto, auto, auto, 24px 24px, 24px 24px;
   color: var(--ink);
   /* Body reading text is a readable serif (SPEC §4: Crimson Pro); UI controls use --font-ui. */
   font-family: "Crimson Pro", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
@@ -82,9 +87,9 @@ body {
   padding-bottom: .3rem;
 }
 
-/* Accessible focus ring everywhere */
+/* Accessible focus ring everywhere — DS: clear gold ring */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid var(--blood-bright);
+  outline: 3px solid var(--gold-bright);
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -132,11 +137,12 @@ body {
 .btn:active { transform: translateY(1px); }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 
-.btn-primary { background: linear-gradient(180deg, var(--blood-bright), var(--blood)); color: #fdf6e8; border: 1px solid #6d1812; box-shadow: inset 0 1px 0 rgba(255,255,255,.18); }
-.btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+/* DS buttons: primary = solid wine; secondary (btn-gold) = paper + gold outline + wine text. */
+.btn-primary { background: var(--blood); color: #fff; border: 1px solid var(--blood); }
+.btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
 
-.btn-gold { background: linear-gradient(180deg, #dcc084, var(--gold)); color: #2a1c07; border: 1px solid #97783c; box-shadow: inset 0 1px 0 rgba(255,255,255,.35); }
-.btn-gold:hover:not(:disabled) { filter: brightness(1.05); }
+.btn-gold { background: var(--panel); color: var(--heading); border: 1px solid var(--gold); font-weight: 700; }
+.btn-gold:hover:not(:disabled) { background: #fffdf6; border-color: var(--line-strong); }
 
 .btn-ghost { background: #fbf6e9; border: 1px solid var(--line); color: var(--ink); }
 .btn-ghost:hover:not(:disabled) { background: #f4ead2; border-color: var(--gold); }
@@ -179,7 +185,7 @@ body {
   border: 1px solid transparent; background: transparent; color: var(--ink-dim);
   font-size: .85rem; font-weight: 600; cursor: pointer;
 }
-.tab[data-active="true"] { background: linear-gradient(180deg, var(--blood-bright), var(--blood)); color: #fdf6e8; border-color: #6d1812; }
+.tab[data-active="true"] { background: var(--blood); color: #fff; border-color: var(--wine-dark); }
 
 /* ============================================================
    Tables that collapse to cards on mobile
@@ -291,17 +297,17 @@ table.sheet tbody tr:nth-child(even) { background: rgba(178, 141, 78, .07); }
 .dice-quick-btn { min-height: 30px !important; padding: 3px 10px !important; font-size: 12px !important; border-radius: 7px !important; }
 .dice-quick-input { width: 90px !important; min-height: 30px !important; padding: 4px 8px !important; font-size: 13px !important; }
 
-/* Individual dice — carved ivory with gold edges */
+/* Individual dice — DS: dark obsidian bodies with red numerals */
 .die {
   width: 46px; height: 46px; display: flex; align-items: center; justify-content: center;
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-weight: 800; font-size: 17px; color: #431409; position: relative;
-  background: radial-gradient(circle at 40% 30%, #fdf3d7, #e3c98d 65%, #b28d4e);
-  border: 1px solid #97783c; filter: drop-shadow(0 3px 5px rgba(88, 52, 10, .35));
+  font-family: "Cinzel", ui-monospace, Menlo, serif;
+  font-weight: 700; font-size: 17px; color: #e23d35; position: relative;
+  background: linear-gradient(145deg, #2a2624, #111);
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, .28));
 }
 .die-s6 { border-radius: 9px; }
-.die-crit { background: radial-gradient(circle at 40% 30%, #d8f0dc, #71b183 65%, #3f7a52); color: #0b2e17; box-shadow: 0 0 14px rgba(79, 157, 98, .55); }
-.die-fumble { background: radial-gradient(circle at 40% 30%, #f5cfc7, #cd5140 65%, #8a2018); color: #3a0d06; box-shadow: 0 0 12px rgba(194, 54, 54, .45); }
+.die-crit { color: #e8cc91; box-shadow: 0 0 16px rgba(215, 192, 138, .8); }
+.die-fumble { color: #f0b9b9; background: linear-gradient(145deg, #3a1512, #1a0806); box-shadow: 0 0 12px rgba(194, 54, 54, .5); }
 @keyframes die-tumble {
   0% { transform: rotate(0) translateY(0) scale(.9); }
   20% { transform: rotate(160deg) translateY(-12px) scale(1.05); }
@@ -320,3 +326,132 @@ table.sheet tbody tr:nth-child(even) { background: rgba(178, 141, 78, .07); }
 /* Keep sheet content clear of the fixed tray */
 .has-dice-tray { padding-bottom: 220px; }
 @media (max-width: 720px) { .has-dice-tray { padding-bottom: 160px; } }
+
+/* ============================================================
+   Portal structure (v2.2) — portal chooser, floating dice FAB,
+   profile avatar. APPENDED — do not edit tokens above.
+   ============================================================ */
+
+/* Portal chooser cards */
+.portal-card {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: .35rem; min-height: 11rem; text-align: center; cursor: pointer;
+  transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.portal-card:hover, .portal-card:focus-visible {
+  border-color: var(--gold);
+  transform: translateY(-3px);
+  box-shadow: 0 3px 6px rgba(85, 32, 37, .10), 0 14px 30px rgba(85, 32, 37, .14);
+}
+.portal-card:active { transform: translateY(-1px); }
+.portal-card-ico { color: var(--heading); margin-bottom: .35rem; }
+
+/* Floating dice action button */
+.fab-dice {
+  position: fixed; right: 16px; bottom: 24px; z-index: 46;
+  width: 56px; height: 56px; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, var(--blood-bright), var(--blood));
+  color: #fdf6e8; border: 1.5px solid #6d1812; cursor: pointer;
+  box-shadow: 0 2px 4px rgba(85, 32, 37, .25), 0 10px 24px rgba(85, 32, 37, .28);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.fab-dice:hover { box-shadow: 0 3px 6px rgba(85, 32, 37, .3), 0 14px 30px rgba(85, 32, 37, .32); }
+.fab-dice.is-pressed, .fab-dice:active { transform: scale(.88); }
+@media (max-width: 640px) {
+  .fab-dice { bottom: calc(76px + env(safe-area-inset-bottom)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fab-dice, .portal-card { transition: none; }
+  .fab-dice.is-pressed, .fab-dice:active, .portal-card:hover { transform: none; }
+}
+
+/* Profile avatar circle */
+.avatar-circle {
+  width: 56px; height: 56px; flex: none; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  color: #fff; border: 1.5px solid var(--line-strong);
+  font-family: var(--font-ui); font-size: 1.4rem; font-weight: 700;
+}
+
+/* Success-tinted chip (e.g. "Email verified") */
+.chip-success {
+  background: rgba(111, 138, 91, .16);
+  border-color: var(--forest);
+  color: #4c6340;
+}
+
+/* ============================================================
+   v2.2 Character Shell — sticky character header + section bar
+   (appended; used only by src/app/characters/[id]/)
+   ============================================================ */
+
+/* Compact sticky header bar (shown when the expanded header scrolls out). */
+.char-compact {
+  display: flex; align-items: center; gap: .6rem;
+  background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 0 1px rgba(255, 253, 245, .65), var(--shadow);
+  padding: .35rem .6rem;
+  overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  animation: char-compact-fade .18s ease;
+}
+.char-compact::-webkit-scrollbar { display: none; }
+@keyframes char-compact-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .char-compact { animation: none; } }
+
+/* Small stat pill (AC / Init / HP) in the compact bar. */
+.char-pill {
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+  min-width: 44px; padding: .12rem .45rem; flex: 0 0 auto;
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, #fdf8ea, var(--inset));
+  line-height: 1.15;
+}
+.char-pill .k { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-dim); font-family: var(--font-ui); font-weight: 700; }
+.char-pill .v { font-size: .95rem; font-weight: 700; white-space: nowrap; }
+
+/* Thin wine HP bar inside the HP pill. */
+.char-hpbar { width: 100%; height: 3px; margin-top: 2px; border-radius: 999px; background: var(--inset); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(88, 52, 10, .12); }
+.char-hpbar > span { display: block; height: 100%; border-radius: 999px; background: var(--blood); }
+
+/* 0 HP: dying / death-saves state — wine/danger tint. */
+.char-dying { background: linear-gradient(180deg, var(--blood-bright), var(--blood)); border-color: var(--wine-dark); color: #fdf6e8; }
+
+/* Concentration active chip — arcane tint. */
+.char-conc { background: rgba(110, 91, 155, .14); border-color: var(--arcane); color: var(--arcane); font-weight: 600; }
+
+/* Extra-dense buttons for the compact bar. */
+.btn-compact { min-height: 30px !important; padding: 3px 10px !important; font-size: 12px !important; border-radius: 7px !important; flex: 0 0 auto; }
+
+/* Horizontal scrollable section bar (sticks with the compact bar). */
+.char-sectionbar {
+  border: 1px solid var(--line); border-radius: 999px; padding: 3px;
+  box-shadow: inset 0 0 0 1px rgba(255, 253, 245, .5), 0 2px 8px rgba(85, 32, 37, .08);
+}
+
+/* ============================================================
+   Wayward Realms DS components — shields, roll chips
+   (docs/design-system/index.html)
+   ============================================================ */
+/* Shield plaque for AC / Initiative / HP (DS .shield). */
+.shield {
+  width: 74px; height: 74px; display: grid; place-items: center; text-align: center;
+  clip-path: polygon(50% 0, 88% 16%, 96% 58%, 50% 100%, 4% 58%, 12% 16%);
+  background: linear-gradient(180deg, #ecdfc4, #e2d5bc);
+  border: 1px solid var(--line-strong);
+  flex: 0 0 auto;
+}
+.shield .k { font-size: 9px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-dim); font-family: var(--font-ui); font-weight: 700; display: block; }
+.shield .v { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 22px; line-height: 1.1; display: block; color: var(--ink); }
+.shield.shield-hp .v { color: var(--heading); font-size: 15px; }
+
+/* Roll chip (DS .roll-chip): gold-bordered wine bonus button. */
+.roll-chip {
+  border: 1px solid var(--gold); background: #fffdf6; border-radius: 7px;
+  padding: 6px 9px; color: var(--heading); font-weight: 700; font-family: var(--font-ui);
+  cursor: pointer; white-space: nowrap;
+}
+.roll-chip:hover { background: var(--panel-2); border-color: var(--line-strong); }
