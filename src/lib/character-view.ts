@@ -133,7 +133,9 @@ export async function loadCharacterView(id: string) {
         damageDice: e.damageDice,
         damageType: e.damageType ?? "",
         finesse: /finesse/.test(props),
-        ranged: /ranged/i.test(e.category ?? "") || /ammunition|thrown/.test(props) || e.rangeNormal != null,
+        // SRD melee weapons carry rangeNormal: 5, and thrown melee weapons use
+        // STR — the authoritative signal is the weaponRange column.
+        ranged: e.weaponRange === "Ranged" || /ammunition/.test(props),
         properties: e.weaponProperties ?? "",
       });
     }

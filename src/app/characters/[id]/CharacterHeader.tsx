@@ -96,6 +96,7 @@ export function CharacterHeader({
             <button onClick={() => canUse && onPatch({ inspiration: !c.inspiration })}
               className={c.inspiration ? "btn-gold" : "btn-ghost"} title="Inspiration">💡</button>
             <a href={`/api/characters/${c.id}/export`} className="btn-ghost" title="Export JSON" download>⬇</a>
+            <a href={`/characters/${c.id}/summary`} className="btn-ghost" title="Print view">🖨</a>
           </div>
         </div>
         <div ref={sentinelRef} aria-hidden />

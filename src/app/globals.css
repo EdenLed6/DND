@@ -756,3 +756,82 @@ table.sheet tbody tr:nth-child(even) { background: rgba(178, 141, 78, .07); }
 }
 /* Hidden party loot (DM-only rows). */
 .loot-hidden { border-style: dashed; border-color: var(--gold); opacity: .9; }
+
+/* ============================================================
+   Print view + shareable character summary (SPEC v2.2 §6)
+   Screen: dense rulebook-style summary in the parchment DS.
+   Print: white paper, black ink, compact type, no chrome.
+   Appended by the print-view agent — used by
+   src/app/characters/[id]/summary/. APPEND-only section.
+   ============================================================ */
+
+/* ---- Summary page (screen) ---- */
+.sum-card { padding: .65rem .8rem; margin: 0 0 .75rem; }
+.sum-card .sum-h { font-size: 1rem; border-bottom: 1.5px solid var(--gold-rule); padding-bottom: .2rem; margin-bottom: .35rem; }
+
+/* Dense multi-column body: cards flow into 2–3 columns and never split. */
+.sum-cols { columns: 3 240px; column-gap: .75rem; }
+.sum-cols > * { break-inside: avoid; page-break-inside: avoid; }
+
+/* Compact stat strip in the summary header. */
+.sum-strip { display: flex; flex-wrap: wrap; gap: .45rem; }
+.sum-stat { min-width: 64px; padding: .3rem .55rem; }
+.sum-k { font-family: var(--font-ui); font-size: .62rem; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-dim); font-weight: 700; }
+.sum-v { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 1.05rem; line-height: 1.15; color: var(--ink); white-space: nowrap; }
+.sum-sub { font-size: .7rem; color: var(--ink-faint); line-height: 1; }
+
+/* Ability boxes: 3×2 grid of score + modifier. */
+.sum-abilities { display: grid; grid-template-columns: repeat(3, 1fr); gap: .4rem; }
+.sum-ability { padding: .3rem .2rem; }
+
+/* Two-column dense skill/save lists. */
+.sum-skills { display: grid; grid-template-columns: 1fr 1fr; gap: 0 .9rem; }
+@media (max-width: 380px) { .sum-skills { grid-template-columns: 1fr; } }
+
+/* Dense key/value row. */
+.sum-row { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; font-size: .8rem; padding: .1rem 0; border-top: 1px solid var(--line-soft); min-width: 0; }
+.sum-row:first-of-type { border-top: 0; }
+.sum-skills .sum-row { border-top: 0; }
+
+/* One-line truncation (feature descriptions, long item names). */
+.sum-line { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+/* Proficiency / equipped dot. */
+.sum-dot { color: var(--gold-text); }
+
+/* Grouped blocks (spells by level, features by source, proficiency kinds). */
+.sum-spell-group, .sum-feature-group { font-size: .8rem; padding: .15rem 0; border-top: 1px solid var(--line-soft); }
+.sum-spell-group:first-of-type, .sum-feature-group:first-of-type { border-top: 0; }
+.sum-spell-group .sum-k, .sum-feature-group .sum-k { display: block; color: var(--gold-text); }
+.sum-currency { margin-top: .3rem; border-top: 1.5px solid var(--gold-rule) !important; }
+
+/* ---- @media print: hide chrome, white paper, black ink, compact ---- */
+@page { margin: 12mm; }
+@media print {
+  /* TopNav lives inside a .no-print wrapper on the summary page; also hide
+     any sticky app chrome + dice UI so other pages print clean too. */
+  .no-print, header.sticky, .bottom-nav, .dice-tray, .fab-dice, .dice3d-cards, .dice3d-builder { display: none !important; }
+  body {
+    background: #fff !important; /* no parchment texture on paper */
+    color: #000 !important;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+  main { padding: 0 !important; max-width: none !important; }
+  .summary-page .card, .summary-page .stat-box {
+    background: #fff !important;
+    box-shadow: none !important;
+    border-color: #999 !important;
+    break-inside: avoid; page-break-inside: avoid;
+  }
+  .summary-page, .summary-page .muted, .summary-page .sum-v { color: #000 !important; }
+  .summary-page .faint, .summary-page .sum-k { color: #444 !important; }
+  .summary-page .font-display.text-gold { color: #000 !important; }
+  .summary-page .sum-dot { color: #000 !important; }
+  .summary-page h1 { font-size: 20px; }
+  .summary-page .sum-card .sum-h { font-size: 12px; border-bottom-color: #000; }
+  .summary-page .sum-row, .summary-page .sum-spell-group, .summary-page .sum-feature-group { font-size: 10px; }
+  .summary-page .sum-cols { columns: 3 200px; column-gap: .6rem; }
+  .summary-page a { color: inherit !important; text-decoration: none; }
+}
+/* ==================== end print view / summary ==================== */
