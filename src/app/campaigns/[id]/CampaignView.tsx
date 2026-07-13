@@ -1,8 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { fromCopper } from "@/lib/dnd/rules";
+import { computeEncounterDifficulty } from "@/lib/dnd/encounter-math";
 import { useRealtime } from "@/lib/realtime/useRealtime";
 
 type Party = {
@@ -232,13 +233,13 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
 
       {/* PLAY */}
       {tab === "play" && (
-        <PlayTab campaign={campaign} encounters={encounters} maps={maps} isDM={isDM} onChange={() => router.refresh()} />
+        <PlayTab campaign={campaign} encounters={encounters} maps={maps} party={party} isDM={isDM} onChange={() => router.refresh()} />
       )}
     </main>
   );
 }
 
-function PlayTab({ campaign, encounters, maps, isDM, onChange }: any) {
+function PlayTab({ campaign, encounters, maps, party, isDM, onChange }: any) {
   const router = useRouter();
   const [name, setName] = useState("");
   async function createEncounter() {
@@ -276,6 +277,163 @@ function PlayTab({ campaign, encounters, maps, isDM, onChange }: any) {
         )}
         {isDM && <p className="text-xs text-[#5e5448]">Maps are created and linked inside the encounter screen (select an encounter → “New Map”).</p>}
       </div>
+      {isDM && <EncounterPlanner campaign={campaign} party={party} />}
+    </div>
+  );
+}
+
+type PlannedMonster = { id: number; name: string; cr: string; xp: number | null; count: number };
+
+function EncounterPlanner({ campaign, party }: { campaign: any; party: Party[] }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState<any[]>([]);
+  const [picked, setPicked] = useState<PlannedMonster[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  async function search(query = q) {
+    const r = await fetch(`/api/srd/monsters?q=${encodeURIComponent(query)}`);
+    setResults(await r.json());
+  }
+  useEffect(() => { if (open && results.length === 0) search(""); }, [open]); // eslint-disable-line
+
+  function addMonster(m: any) {
+    setPicked((p) => {
+      const i = p.findIndex((x) => x.id === m.id);
+      if (i >= 0) return p.map((x, j) => (j === i ? { ...x, count: x.count + 1 } : x));
+      return [...p, { id: m.id, name: m.name, cr: m.cr ?? "0", xp: m.xp ?? null, count: 1 }];
+    });
+  }
+  function step(id: number, delta: number) {
+    setPicked((p) => p
+      .map((x) => (x.id === id ? { ...x, count: x.count + delta } : x))
+      .filter((x) => x.count > 0));
+  }
+
+  const levels = party.map((p) => p.level);
+  const diff = computeEncounterDifficulty(levels, picked.map((m) => ({ cr: m.cr, count: m.count })));
+  const scaleMax = Math.max(diff.thresholds.deadly * 1.25, diff.adjustedXp * 1.1, 1);
+  const pct = (v: number) => Math.min(100, (v / scaleMax) * 100);
+
+  const RATING_STYLE: Record<string, React.CSSProperties> = {
+    hard: { background: "rgba(168,93,59,.2)", borderColor: "var(--rust)", color: "#7a3a1c" },
+    deadly: { background: "var(--blood)", borderColor: "var(--wine-dark)", color: "#fdf6e8" },
+  };
+  const ratingClass = diff.rating === "medium" ? "chip-gold" : "chip";
+
+  async function createWithMonsters() {
+    if (picked.length === 0 || busy) return;
+    setBusy(true);
+    try {
+      const name = picked.map((m) => (m.count > 1 ? `${m.name} ×${m.count}` : m.name)).join(", ").slice(0, 80) || "Encounter";
+      const res = await fetch(`/api/campaigns/${campaign.id}/encounters`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }),
+      });
+      if (!res.ok) { setBusy(false); return; }
+      const enc = await res.json();
+      for (const m of picked) {
+        await fetch(`/api/encounters/${enc.id}`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ op: "addMonster", monsterId: m.id, count: m.count }),
+        });
+      }
+      router.push(`/play/${enc.id}`);
+    } catch {
+      setBusy(false);
+    }
+  }
+
+  const TICKS: [keyof typeof diff.thresholds, string][] = [
+    ["easy", "Easy"], ["medium", "Medium"], ["hard", "Hard"], ["deadly", "Deadly"],
+  ];
+
+  return (
+    <div className="card md:col-span-2">
+      <button className="flex w-full items-center justify-between" onClick={() => setOpen((o) => !o)}>
+        <h3 className="font-display text-gold">🧮 Encounter Planner</h3>
+        <span className="chip">{open ? "▲ Hide" : "▼ Open"}</span>
+      </button>
+
+      {open && (
+        <div className="mt-3 grid gap-4 md:grid-cols-2">
+          {/* Monster search */}
+          <div className="space-y-2">
+            <div className="flex gap-1">
+              <input className="input" placeholder="Search monster..." value={q}
+                onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} />
+              <button className="btn-ghost" onClick={() => search()}>Search</button>
+            </div>
+            <div className="max-h-48 space-y-1 overflow-y-auto text-sm">
+              {results.map((m: any) => (
+                <div key={m.id} className="flex items-center justify-between border-t border-[#dfd5b8] py-1">
+                  <span>{m.name} <span className="muted text-xs">CR {m.cr ?? "?"} · {m.xp ?? "?"} XP</span></span>
+                  <button className="btn-ghost !px-2 !py-0.5" onClick={() => addMonster(m)}>+ Add</button>
+                </div>
+              ))}
+              {results.length === 0 && <p className="muted text-xs">No monsters found.</p>}
+            </div>
+
+            {/* Picked roster with count steppers */}
+            <div className="border-t border-[#dfd5b8] pt-2">
+              <div className="mb-1 text-sm text-[#5e5448]">Roster</div>
+              {picked.length === 0 ? <p className="muted text-xs">No monsters added yet.</p> : (
+                <ul className="space-y-1 text-sm">
+                  {picked.map((m) => (
+                    <li key={m.id} className="flex items-center justify-between">
+                      <span>{m.name} <span className="muted text-xs">CR {m.cr}</span></span>
+                      <span className="flex items-center gap-1">
+                        <button className="btn-ghost !px-2 !py-0.5" onClick={() => step(m.id, -1)}>−</button>
+                        <span className="chip !py-0.5">×{m.count}</span>
+                        <button className="btn-ghost !px-2 !py-0.5" onClick={() => step(m.id, +1)}>+</button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          {/* Difficulty readout */}
+          <div className="space-y-3">
+            <div className="text-sm text-[#5e5448]">
+              Party: {party.length === 0 ? "no characters" : party.map((p) => `${p.name} (L${p.level})`).join(", ")}
+            </div>
+
+            {/* Threshold bar */}
+            <div className="relative mt-6 h-3 rounded-full border border-[#dfd5b8]"
+              style={{ background: "linear-gradient(90deg, #ece4cb, #dcc9a0)" }}>
+              {TICKS.map(([k, label]) => (
+                <div key={k} className="absolute top-[-4px] h-5 w-px bg-[#8a7a5c]" style={{ left: `${pct(diff.thresholds[k])}%` }}>
+                  <span className="absolute left-1/2 top-[-14px] -translate-x-1/2 whitespace-nowrap text-[10px] text-[#5e5448]">{label}</span>
+                </div>
+              ))}
+              {picked.length > 0 && (
+                <div className="absolute top-[-6px] h-6 w-[3px] rounded-sm"
+                  style={{ left: `${pct(diff.adjustedXp)}%`, background: "var(--blood)" }}
+                  title={`Adjusted XP: ${diff.adjustedXp}`} />
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className={ratingClass} style={RATING_STYLE[diff.rating]}>
+                {diff.rating.charAt(0).toUpperCase() + diff.rating.slice(1)}
+              </span>
+              <span>
+                XP {diff.totalXp} · ×{diff.multiplier} → {diff.adjustedXp} adjusted · {diff.perPlayerXp}/player
+              </span>
+            </div>
+
+            {diff.warnings.map((w, i) => (
+              <div key={i} className="rounded border border-[#d89d93] bg-[#f3dedb] px-2 py-1 text-xs text-[#8b2f2e]">⚠ {w}</div>
+            ))}
+
+            <button className="btn-primary w-full" disabled={picked.length === 0 || busy} onClick={createWithMonsters}>
+              {busy ? "Creating..." : "⚔ Create Encounter with These Monsters"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
