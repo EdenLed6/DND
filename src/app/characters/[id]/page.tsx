@@ -4,6 +4,7 @@ import { loadCharacterView } from "@/lib/character-view";
 import { roleInCampaign } from "@/lib/auth/rbac";
 import { TopNav } from "@/components/TopNav";
 import { DiceTray } from "@/components/DiceTray";
+import { RollFeedListener } from "@/components/RollFeedListener";
 import { CharacterSheet } from "./CharacterSheet";
 
 export default async function CharacterPage({ params }: { params: Promise<{ id: string }> }) {
@@ -37,6 +38,9 @@ export default async function CharacterPage({ params }: { params: Promise<{ id: 
         isDM={isDM}
       />
       <DiceTray />
+      {view.character.campaignId && (
+        <RollFeedListener campaignId={view.character.campaignId} selfName={user.displayName} />
+      )}
     </div>
   );
 }
