@@ -455,3 +455,101 @@ table.sheet tbody tr:nth-child(even) { background: rgba(178, 141, 78, .07); }
   cursor: pointer; white-space: nowrap;
 }
 .roll-chip:hover { background: var(--panel-2); border-color: var(--line-strong); }
+
+/* ============================================================
+   3D dice overlay — SPEC-PLAYER §19 (roll cards + dice builder).
+   The WebGL canvas itself (#dice3d-overlay) is styled inline by
+   the engine: fixed, inset 0, pointer-events none, z-index 44
+   (below the dice tray at 45 and the FAB at 46).
+   ============================================================ */
+
+/* Roll result cards — stacked bottom-left above the dice tray (§19.8). */
+.dice3d-cards {
+  position: fixed; left: 16px; bottom: 230px; z-index: 45;
+  display: flex; flex-direction: column-reverse; gap: 10px;
+  width: min(300px, calc(100vw - 32px)); pointer-events: none;
+}
+.dice3d-card {
+  position: relative; pointer-events: auto;
+  background: rgba(251, 247, 234, .92);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border: 2px solid var(--mist-blue); border-radius: 12px;
+  box-shadow: var(--shadow-float);
+  padding: 12px 14px;
+  animation: dice3d-card-in .28s ease-out;
+}
+.dice3d-card.is-crit { border-color: var(--gold); }
+.dice3d-card.is-fumble { border-color: var(--danger); }
+@keyframes dice3d-card-in {
+  from { opacity: 0; transform: translateY(10px) scale(.97); }
+  to { opacity: 1; transform: none; }
+}
+.dice3d-card-kicker {
+  font-family: var(--font-ui); font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .14em; color: var(--heading);
+  padding-right: 22px;
+}
+.dice3d-card-bd { font-size: 12.5px; color: var(--ink-dim); margin-top: 3px; word-break: break-word; }
+.dice3d-card-row { display: flex; align-items: baseline; gap: 10px; margin-top: 2px; }
+.dice3d-card-total {
+  font-family: "Cinzel", "Iowan Old Style", Palatino, Georgia, serif;
+  font-size: 34px; line-height: 1.1; color: var(--heading); font-weight: 700;
+}
+.dice3d-card-verdict { font-family: var(--font-ui); font-size: 13px; font-weight: 700; letter-spacing: .04em; }
+.dice3d-card-close {
+  position: absolute; top: 6px; right: 8px; border: 0; background: transparent;
+  color: var(--ink-faint); font-size: 13px; line-height: 1; padding: 4px;
+  cursor: pointer; border-radius: 6px;
+}
+.dice3d-card-close:hover { color: var(--heading); background: rgba(122, 43, 47, .08); }
+
+/* Dice Builder drawer — opened by the floating dice button (§19.6). */
+.dice3d-builder {
+  position: fixed; right: 16px; bottom: 104px; z-index: 47;
+  width: min(320px, calc(100vw - 32px));
+  background: var(--panel); border: 1px solid var(--line-strong);
+  border-radius: var(--radius); box-shadow: var(--shadow-float);
+  padding: 14px;
+  animation: dice3d-card-in .22s ease-out;
+}
+.dice3d-builder-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.dice3d-builder-head .dice3d-card-close { position: static; }
+.dice3d-builder-dice { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.dice3d-die-btn {
+  position: relative; min-height: var(--tap);
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: #fbf6e9; color: var(--ink); font-weight: 700;
+  font-family: var(--font-ui); font-size: 13px; cursor: pointer;
+}
+.dice3d-die-btn:hover { border-color: var(--gold); background: #f4ead2; }
+.dice3d-die-btn.has-count { border-color: var(--gold); background: #fffdf6; color: var(--heading); }
+.dice3d-die-badge {
+  position: absolute; top: -7px; right: -7px; min-width: 20px; height: 20px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px; background: var(--blood); color: #fff;
+  font-size: 11px; font-weight: 700; padding: 0 5px;
+  border: 1px solid var(--wine-dark);
+}
+.dice3d-builder-mod { display: flex; align-items: center; gap: 8px; margin: 12px 0; }
+.dice3d-builder-mod label {
+  font-family: var(--font-ui); font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .1em; color: var(--ink-faint);
+}
+.dice3d-builder-mod .input { width: 72px; }
+.dice3d-builder-expr { font-size: 12px; color: var(--ink-dim); flex: 1; min-width: 0; word-break: break-word; }
+.dice3d-builder-actions { display: flex; gap: 8px; }
+.dice3d-builder-actions .btn-primary { flex: 1; }
+.dice3d-toggle {
+  display: flex; align-items: center; gap: 7px; margin-top: 12px;
+  font-family: var(--font-ui); font-size: 12px; color: var(--ink-dim);
+  cursor: pointer; user-select: none;
+}
+
+@media (max-width: 720px) {
+  .dice3d-cards { bottom: 170px; }
+  .dice3d-builder { bottom: calc(150px + env(safe-area-inset-bottom)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dice3d-card, .dice3d-builder { animation: none; }
+}
+/* ============================ end 3D dice overlay ============================ */

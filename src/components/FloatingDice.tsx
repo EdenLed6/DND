@@ -1,17 +1,28 @@
 "use client";
-// Floating dice action button — SPEC-v2 §5 ("Floating dice button").
-// Fixed bottom-right; tapping rolls a d20 into the dice tray.
+// Floating dice action button — SPEC-v2 §5 + SPEC-PLAYER §19.6.
+// Tapping toggles the 3D Dice Builder drawer; if the 3D overlay is
+// unavailable (no WebGL / reduced motion / disabled), falls back to the
+// original behavior of rolling a d20 into the dice tray.
 import { useState } from "react";
 import { rollToTray } from "@/components/DiceTray";
 
 export function FloatingDice() {
   const [pressed, setPressed] = useState(false);
 
-  function onClick() {
+  function rollFallback() {
     rollToTray("D20", "1d20");
     window.dispatchEvent(new CustomEvent("dice-tray-expand"));
+  }
+
+  function onClick() {
     setPressed(true);
     window.setTimeout(() => setPressed(false), 180);
+    void import("@/dice3d")
+      .then((m) => {
+        if (m.isOverlayAvailable()) m.toggleBuilder();
+        else rollFallback();
+      })
+      .catch(() => rollFallback());
   }
 
   return (
@@ -19,8 +30,8 @@ export function FloatingDice() {
       type="button"
       className={`fab-dice${pressed ? " is-pressed" : ""}`}
       onClick={onClick}
-      aria-label="Roll a d20"
-      title="Roll a d20"
+      aria-label="Open dice builder"
+      title="Dice builder"
     >
       <svg
         width="26"

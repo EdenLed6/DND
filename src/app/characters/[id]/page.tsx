@@ -39,7 +39,7 @@ export default async function CharacterPage({ params }: { params: Promise<{ id: 
       />
       <DiceTray />
       {view.character.campaignId && (
-        <RollFeedListener campaignId={view.character.campaignId} selfName={user.displayName} />
+        <RollFeedListener campaignId={view.character.campaignId} selfName={user.displayName} characterName={view.character.name} />
       )}
     </div>
   );

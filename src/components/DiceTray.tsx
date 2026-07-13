@@ -2,7 +2,12 @@
 // D&D Beyond-style dice tray + roll log. Fixed at the bottom, collapsible.
 // Any client component can call rollToTray(...) / pushTrayEntry(...) to feed it.
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import dynamic from "next/dynamic";
 import { roll, rollDamage, type RollDie } from "@/lib/dnd/dice";
+
+// 3D physics dice overlay (SPEC-PLAYER §19) — client-only visual layer.
+const DiceOverlay = dynamic(() => import("@/dice3d/DiceOverlay").then((m) => m.DiceOverlay), { ssr: false });
+const OVERLAY_SIDES = [4, 6, 8, 10, 12, 20, 100];
 
 // ---------------------------------------------------------------------------
 // Tiny client store / singleton
@@ -17,7 +22,13 @@ export interface TrayEntry {
   verdict?: string;    // "CRIT!", "HIT", "MISS", "NAT 1"
   crit?: boolean;
   fumble?: boolean;
+  remote?: boolean;    // came from the campaign roll feed — never republish
 }
+
+// Optional campaign publisher: RollFeedListener registers one when the page
+// has a campaign context, so local rolls are broadcast to the party.
+let rollPublisher: ((e: TrayEntry) => void) | null = null;
+export function setRollPublisher(fn: ((e: TrayEntry) => void) | null) { rollPublisher = fn; }
 
 interface TrayState { current: TrayEntry | null; log: TrayEntry[]; }
 
@@ -32,6 +43,22 @@ function push(entry: Omit<TrayEntry, "id">) {
   const e: TrayEntry = { ...entry, id: ++counter };
   state = { current: e, log: [e, ...state.log].slice(0, 40) };
   emit();
+  // Broadcast local rolls to the campaign feed (never re-broadcast remote ones).
+  if (!e.remote && rollPublisher) { try { rollPublisher(e); } catch { /* feed is optional */ } }
+  // Visual 3D overlay (fire-and-forget): throw physical dice over the UI and
+  // show a roll card. The tray above stays the logical log / fallback.
+  if (typeof window !== "undefined") {
+    void import("@/dice3d")
+      .then((m) => {
+        if (!m.isOverlayAvailable()) return;
+        m.pushRollCard(e);
+        m.throwDice(
+          e.dice.filter((d) => OVERLAY_SIDES.includes(d.sides)).slice(0, 20),
+          { label: e.label },
+        );
+      })
+      .catch(() => { /* overlay is optional */ });
+  }
 }
 
 /** Roll a dice expression ("1d20+5", "2d6") and show it in the tray. */
@@ -159,6 +186,8 @@ export function DiceTray() {
     "var(--gold-bright)";
 
   return (
+    <>
+    <DiceOverlay />
     <div className={`dice-tray${collapsed ? " is-collapsed" : ""}`}>
       <button
         type="button"
@@ -228,6 +257,7 @@ export function DiceTray() {
         <QuickExpr />
       </div>
     </div>
+    </>
   );
 }
 
