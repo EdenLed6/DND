@@ -17,7 +17,8 @@ export function InventoryManager({ characterId, items, canEdit, canUse, carryCap
     });
     router.refresh();
   }
-  async function removeItem(itemId: string) {
+  async function removeItem(itemId: string, name: string) {
+    if (!confirm(`Delete item "${name}"?`)) return;
     await fetch(`/api/characters/${characterId}/items?itemId=${itemId}`, { method: "DELETE" });
     router.refresh();
   }
@@ -28,7 +29,14 @@ export function InventoryManager({ characterId, items, canEdit, canUse, carryCap
         <h3 className="font-display text-gold">Equipment</h3>
         {canEdit && <button className="btn-ghost !py-0.5" onClick={() => setShowAdd(true)}>+ Add</button>}
       </div>
-      {items.length === 0 ? <p className="text-sm text-[#5e5448]">Empty.</p> : (
+      {items.length === 0 ? (
+        <div className="panel-inset p-4 text-center">
+          <p className="text-sm text-[#5e5448]">No equipment yet — every adventurer needs some gear.</p>
+          {canEdit && (
+            <button className="btn-ghost mt-2 text-sm" onClick={() => setShowAdd(true)}>Add your first item</button>
+          )}
+        </div>
+      ) : (
         <ul className="text-sm">
           {items.map((it) => (
             <li key={it.id} className="flex items-center justify-between gap-2 border-t border-[#dfd5b8] py-1">
@@ -40,7 +48,7 @@ export function InventoryManager({ characterId, items, canEdit, canUse, carryCap
                   {canEdit && <button className={it.attuned ? "chip bg-arcane text-white" : "chip"} onClick={() => patchItem(it.id, { attuned: !it.attuned })}>attune</button>}
                   {canEdit && <button className="chip" onClick={() => patchItem(it.id, { quantity: it.quantity + 1 })}>+</button>}
                   {canEdit && <button className="chip" onClick={() => it.quantity > 1 && patchItem(it.id, { quantity: it.quantity - 1 })}>−</button>}
-                  {canEdit && <button className="chip" onClick={() => removeItem(it.id)}>🗑</button>}
+                  {canEdit && <button className="chip" onClick={() => removeItem(it.id, it.name)}>🗑</button>}
                 </span>
               )}
             </li>

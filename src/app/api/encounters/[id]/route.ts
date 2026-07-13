@@ -71,6 +71,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         emitToCampaign(campaignId, "encounter:started", { encounterId: id });
         return NextResponse.json(c);
       }
+      case "damage": {
+        const amount = Math.floor(Number(body.amount));
+        if (!Number.isFinite(amount) || amount < 0 || amount > 999) return bad("Bad amount");
+        const label = typeof body.label === "string" ? body.label.slice(0, 80) : undefined;
+        const breakdown = typeof body.breakdown === "string" ? body.breakdown.slice(0, 120) : undefined;
+        const r = await combat.damageCombatant(id, body.combatantId, amount, label, breakdown);
+        return NextResponse.json(r);
+      }
+      case "heal": {
+        const amount = Math.floor(Number(body.amount));
+        if (!Number.isFinite(amount) || amount < 0 || amount > 999) return bad("Bad amount");
+        const r = await combat.healCombatant(id, body.combatantId, amount);
+        return NextResponse.json(r);
+      }
+      case "undoDamage": {
+        const r = await combat.undoLastDamage(id);
+        if (!r) return bad("Nothing to undo");
+        return NextResponse.json(r);
+      }
       case "attack": {
         const result = await combat.attack(id, body.attackerId, body.actionName, body.targetIds ?? [], {
           advantage: body.advantage, disadvantage: body.disadvantage,

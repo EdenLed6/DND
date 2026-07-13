@@ -55,6 +55,16 @@ export function PlayScreen({ encId, campaignId, initialState, campaignChars, map
   const activeId = state?.status === "ACTIVE" ? combatants[state.turnIndex]?.id : null;
   const selected = combatants.find((c) => c.id === selectedId) ?? null;
 
+  // Undo is possible when a visible log entry recorded pre-damage HP, hasn't
+  // been undone yet, and its combatant is still in the encounter.
+  const canUndo = isDM && (state?.log ?? []).some((l: any) => {
+    try {
+      const d = JSON.parse(l.detailJson || "null");
+      return !!d && (d.kind === "damage" || d.kind === "heal") && !d.undone &&
+        combatants.some((c) => c.id === d.combatantId);
+    } catch { return false; }
+  });
+
   /** DM: advance the turn, then tick conditions for the combatant whose turn
    *  ended (phase "end") and the one whose turn starts (phase "start"). The
    *  server returns damage/save prompts for the DM to confirm. */
@@ -80,7 +90,8 @@ export function PlayScreen({ encId, campaignId, initialState, campaignChars, map
 
   async function resolveDamagePrompt(p: any) {
     const res = roll(p.expr); // DM confirms; we roll client-side via the shared dice engine
-    await condOp({
+    // Goes through the encounter "damage" op so the hit is undoable from the combat log.
+    await op({
       op: "damage", combatantId: p.targetId, amount: res.total,
       label: `${p.name}${p.damageType ? ` (${p.damageType})` : ""}`, breakdown: res.breakdown,
     });
@@ -139,7 +150,7 @@ export function PlayScreen({ encId, campaignId, initialState, campaignChars, map
           {isDM && prompts.length > 0 && (
             <PromptQueue prompts={prompts} onDamage={resolveDamagePrompt} onSave={resolveSavePrompt} onSkip={dropPrompt} />
           )}
-          <CombatLog log={state?.log ?? []} />
+          <CombatLog log={state?.log ?? []} isDM={isDM} canUndo={canUndo} onUndo={() => op({ op: "undoDamage" })} />
         </div>
       </div>
 
@@ -474,18 +485,27 @@ function InitiativeTracker({ combatants, activeId, isDM, onUpdate, selectedId, o
               )}
               {isDM && (
                 <div className="mt-1 flex flex-wrap items-center gap-1 text-xs" onClick={(e) => e.stopPropagation()}>
-                  <button className="btn-ghost !px-1.5 !py-0" onClick={() => onUpdate({ op: "updateCombatant", combatantId: c.id, patch: { currentHp: Math.max(0, c.currentHp - 5) } })}>−5</button>
-                  <button className="btn-ghost !px-1.5 !py-0" onClick={() => onUpdate({ op: "updateCombatant", combatantId: c.id, patch: { currentHp: Math.min(c.maxHp, c.currentHp + 5) } })}>+5</button>
+                  <button className="btn-ghost !px-1.5 !py-0" onClick={() => onUpdate({ op: "damage", combatantId: c.id, amount: 5 })}>−5</button>
+                  <button className="btn-ghost !px-1.5 !py-0" onClick={() => onUpdate({ op: "heal", combatantId: c.id, amount: 5 })}>+5</button>
                   <button className="btn-ghost !px-1.5 !py-0" onClick={() => onUpdate({ op: "updateCombatant", combatantId: c.id, patch: { isVisible: !c.isVisible } })}>{c.isVisible ? "Hide" : "Reveal"}</button>
                   {c.token && <button className="btn-ghost !px-1.5 !py-0" title="Set token image" onClick={() => { const url = window.prompt("Token image URL (blank to clear):", c.token.imageUrl ?? ""); if (url !== null) onUpdate({ op: "updateToken", tokenId: c.token.id, patch: { imageUrl: url || null } }); }}>🖼</button>}
                   {onAddCondition && <button className="btn-ghost !px-1.5 !py-0" title="Add condition" onClick={() => onAddCondition(c.id)}>＋ Cond</button>}
-                  <button className="btn-ghost !px-1.5 !py-0" onClick={() => onUpdate({ op: "removeCombatant", combatantId: c.id })}>🗑</button>
+                  <button className="btn-ghost !px-1.5 !py-0" title="Remove from encounter"
+                    onClick={() => { if (confirm(`Remove combatant "${c.name}" from the encounter?`)) onUpdate({ op: "removeCombatant", combatantId: c.id }); }}>🗑</button>
                 </div>
               )}
             </div>
           );
         })}
-        {combatants.length === 0 && <p className="text-sm text-[#5e5448]">No combatants. Add some in Build Encounter.</p>}
+        {combatants.length === 0 && (
+          <div className="panel-inset p-4 text-center">
+            <p className="text-sm text-[#5e5448]">
+              {isDM
+                ? "No combatants yet — add the party and monsters from the Build tab."
+                : "No combatants yet — the DM is still preparing the encounter."}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -708,10 +728,18 @@ function ApplyConditionModal({ combatant, onClose, onApply }: any) {
 }
 
 /* ---------------- Combat Log ---------------- */
-function CombatLog({ log }: any) {
+function CombatLog({ log, isDM, canUndo, onUndo }: any) {
   return (
     <div className="card">
-      <h3 className="mb-2 font-display text-gold">Combat Log</h3>
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="font-display text-gold">Combat Log</h3>
+        {isDM && (
+          <button className="btn-ghost !py-0.5 text-xs" disabled={!canUndo} onClick={onUndo}
+            title={canUndo ? "Undo the last damage / healing entry" : "Nothing to undo"}>
+            ↩ Undo
+          </button>
+        )}
+      </div>
       <div className="max-h-64 space-y-1 overflow-y-auto text-xs">
         {log.map((l: any) => (
           <div key={l.id} className="border-b border-[#dfd5b8] pb-1">

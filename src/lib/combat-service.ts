@@ -241,6 +241,72 @@ export async function setAllCells(encounterId: string, revealAll: boolean) {
   emitToEncounter(encounterId, "fog:changed", { fogEnabled: enc.fogEnabled, revealedCells: revealed });
 }
 
+/**
+ * Apply damage to a combatant (temp HP absorbs first) and log an undoable
+ * entry: detailJson carries {kind:"damage", combatantId, hpBefore, hpAfter,
+ * tempBefore, tempAfter, amount} so undoLastDamage can reverse it.
+ */
+export async function damageCombatant(
+  encounterId: string, combatantId: string, amount: number, label?: string, breakdown?: string,
+) {
+  const c = await prisma.combatant.findFirst({ where: { id: combatantId, encounterId } });
+  if (!c) throw new Error("combatant not in this encounter");
+  if (amount <= 0) return { currentHp: c.currentHp, tempHp: c.tempHp };
+  const after = applyDamage(c.currentHp, c.tempHp, amount);
+  await updateCombatant(encounterId, combatantId, { currentHp: after.currentHp, tempHp: after.tempHp });
+  await log(
+    encounterId, "DM",
+    `${c.name} takes ${amount} damage${label ? ` from ${label}` : ""}${breakdown ? ` (${breakdown})` : ""}${after.dropped ? " and drops to 0 HP!" : ""}`,
+    { kind: "damage", combatantId, hpBefore: c.currentHp, hpAfter: after.currentHp, tempBefore: c.tempHp, tempAfter: after.tempHp, amount },
+  );
+  return { currentHp: after.currentHp, tempHp: after.tempHp };
+}
+
+/** Heal a combatant (clamped to max HP) with an undoable log entry. */
+export async function healCombatant(encounterId: string, combatantId: string, amount: number) {
+  const c = await prisma.combatant.findFirst({ where: { id: combatantId, encounterId } });
+  if (!c) throw new Error("combatant not in this encounter");
+  const hpAfter = Math.min(c.maxHp, c.currentHp + Math.max(0, amount));
+  const healed = hpAfter - c.currentHp;
+  if (healed <= 0) return { currentHp: c.currentHp, tempHp: c.tempHp };
+  await updateCombatant(encounterId, combatantId, { currentHp: hpAfter });
+  await log(encounterId, "DM", `${c.name} regains ${healed} HP`, {
+    kind: "heal", combatantId, hpBefore: c.currentHp, hpAfter, tempBefore: c.tempHp, tempAfter: c.tempHp, amount: healed,
+  });
+  return { currentHp: hpAfter, tempHp: c.tempHp };
+}
+
+/**
+ * Undo the most recent damage/healing log entry that is still reversible:
+ * restores the combatant's HP/temp HP to the recorded pre-change values,
+ * marks the entry as undone, and appends an "↩ Undid: ..." log line.
+ * Returns null when there is nothing undoable.
+ */
+export async function undoLastDamage(encounterId: string) {
+  const entries = await prisma.combatLog.findMany({
+    where: { encounterId }, orderBy: [{ ts: "desc" }, { id: "desc" }], take: 200,
+  });
+  for (const e of entries) {
+    let d: any = null;
+    try { d = JSON.parse(e.detailJson || "null"); } catch { continue; }
+    if (!d || (d.kind !== "damage" && d.kind !== "heal") || d.undone) continue;
+    if (typeof d.hpBefore !== "number" || !d.combatantId) continue;
+    // The combatant may have been removed since — skip to an older entry.
+    const c = await prisma.combatant.findFirst({ where: { id: d.combatantId, encounterId } });
+    if (!c) continue;
+    await updateCombatant(encounterId, d.combatantId, {
+      currentHp: d.hpBefore,
+      ...(typeof d.tempBefore === "number" ? { tempHp: d.tempBefore } : {}),
+    });
+    await prisma.combatLog.update({
+      where: { id: e.id }, data: { detailJson: JSON.stringify({ ...d, undone: true }) },
+    });
+    await log(encounterId, "DM", `↩ Undid: ${e.message}`, { kind: "undo", targetLogId: e.id });
+    return { ok: true, undoneLogId: e.id, combatantId: d.combatantId, currentHp: d.hpBefore };
+  }
+  return null;
+}
+
 /** DM attacks: attacker combatant uses an action against target combatants. */
 export async function attack(
   encounterId: string, attackerId: string, actionName: string, targetIds: string[],
@@ -260,11 +326,17 @@ export async function attack(
     const outcome = action.save
       ? resolveSaveAttack(action, { name: t.name, saveBonus: dexMod }, opts)
       : resolveAttackRoll(action, { name: t.name, ac: t.ac }, opts);
+    let detail: any = { attacker: attacker.name, action: action.name };
     if (outcome.damage > 0) {
       const after = applyDamage(t.currentHp, t.tempHp, outcome.damage);
       await updateCombatant(encounterId, t.id, { currentHp: after.currentHp, tempHp: after.tempHp });
+      // Undo payload: pre/post HP so undoLastDamage can reverse this hit.
+      detail = {
+        ...detail, kind: "damage", combatantId: t.id, amount: outcome.damage,
+        hpBefore: t.currentHp, hpAfter: after.currentHp, tempBefore: t.tempHp, tempAfter: after.tempHp,
+      };
     }
-    await log(encounterId, attacker.name, outcome.message, { attacker: attacker.name, action: action.name });
+    await log(encounterId, attacker.name, outcome.message, detail);
     outcomes.push(outcome);
   }
   return { action: action.name, outcomes };

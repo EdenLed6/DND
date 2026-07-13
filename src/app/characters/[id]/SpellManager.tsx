@@ -17,7 +17,8 @@ export function SpellManager({ characterId, spells, casterClass, canEdit, canUse
     });
     router.refresh();
   }
-  async function remove(spellId: number) {
+  async function remove(spellId: number, name: string) {
+    if (!confirm(`Remove spell "${name}"?`)) return;
     await fetch(`/api/characters/${characterId}/spells?spellId=${spellId}`, { method: "DELETE" });
     router.refresh();
   }
@@ -32,7 +33,14 @@ export function SpellManager({ characterId, spells, casterClass, canEdit, canUse
         <span className="text-sm text-[#5e5448]">Known Spells ({spells.length})</span>
         {canEdit && <button className="btn-ghost !py-0.5 text-xs" onClick={() => setShowAdd(true)}>+ Add Spell</button>}
       </div>
-      {levels.length === 0 && <p className="text-xs text-[#5e5448]">No spells. Add from the class list.</p>}
+      {levels.length === 0 && (
+        <div className="panel-inset p-4 text-center">
+          <p className="text-sm text-[#5e5448]">No spells known yet — magic awaits in the {casterClass || "class"} list.</p>
+          {canEdit && (
+            <button className="btn-ghost mt-2 text-sm" onClick={() => setShowAdd(true)}>Learn your first spell</button>
+          )}
+        </div>
+      )}
       {levels.map((lvl) => (
         <div key={lvl} className="mb-1">
           <div className="text-[10px] uppercase text-[#5e5448]">{lvl === 0 ? "Cantrips" : `Level ${lvl}`}</div>
@@ -47,7 +55,7 @@ export function SpellManager({ characterId, spells, casterClass, canEdit, canUse
                 {s.concentration && <span className="text-[10px] text-arcane">C</span>}
                 {s.ritual && <span className="text-[10px] text-[#5e5448]">R</span>}
               </span>
-              {canEdit && <button className="text-xs text-[#5e5448] hover:text-red-700" onClick={() => remove(s.id)}>✕</button>}
+              {canEdit && <button className="text-xs text-[#5e5448] hover:text-red-700" title="Remove spell" onClick={() => remove(s.id, s.name)}>✕</button>}
             </div>
           ))}
         </div>
