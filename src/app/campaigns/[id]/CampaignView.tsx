@@ -55,11 +55,11 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
       <div className="card flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl text-gold">{campaign.name}</h1>
-          <div className="text-sm text-[#a9977c]">{campaign.description || "—"} · DM: {campaign.dmName}</div>
+          <div className="text-sm text-[#6b5a42]">{campaign.description || "—"} · DM: {campaign.dmName}</div>
         </div>
         <div className="text-right text-sm">
           <div>Invite Code: <code className="text-gold">{campaign.inviteCode}</code></div>
-          <div className="text-[#a9977c]">{members.length} members · {party.length} characters</div>
+          <div className="text-[#6b5a42]">{members.length} members · {party.length} characters</div>
           {isDM ? <span className="chip mt-1">👑 DM</span> : <span className="chip mt-1">Player</span>}
         </div>
       </div>
@@ -88,11 +88,11 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1 text-xs">
                   <span className="chip">Lvl {p.level}{p.canLevelUp && " ⬆"}</span>
-                  <span className={`chip ${p.hp === 0 ? "text-red-400" : ""}`}>HP {p.hp}/{p.maxHp}</span>
+                  <span className={`chip ${p.hp === 0 ? "text-red-700" : ""}`}>HP {p.hp}/{p.maxHp}</span>
                   <span className="chip">AC {p.ac}</span>
                   <span className="chip">PP {p.pp}</span>
                   <span className="chip">{fromCopper(p.gold).gp}g</span>
-                  {p.conditions.length > 0 && <span className="chip text-[#d1a000]">{p.conditions.join(", ")}</span>}
+                  {p.conditions.length > 0 && <span className="chip text-[#a07908]">{p.conditions.join(", ")}</span>}
                 </div>
                 {isDM && (
                   <div className="mt-2 flex gap-2">
@@ -116,10 +116,10 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
                   <tr key={p.id}>
                     {isDM && <td><input type="checkbox" checked={sel.includes(p.id)} onChange={(e) => setSel((s) => e.target.checked ? [...s, p.id] : s.filter((x) => x !== p.id))} /></td>}
                     <td><Link href={`/characters/${p.id}`} className="text-gold hover:underline">{p.name}</Link></td>
-                    <td className="text-[#a9977c]">{p.owner}</td>
+                    <td className="text-[#6b5a42]">{p.owner}</td>
                     <td>{p.race} · {p.classes}</td>
-                    <td>{p.level}{p.canLevelUp && <span className="ml-1 text-green-400" title="level-up available">⬆</span>}</td>
-                    <td className={p.hp === 0 ? "text-red-400" : ""}>{p.hp}/{p.maxHp}</td>
+                    <td>{p.level}{p.canLevelUp && <span className="ml-1 text-green-700" title="level-up available">⬆</span>}</td>
+                    <td className={p.hp === 0 ? "text-red-700" : ""}>{p.hp}/{p.maxHp}</td>
                     <td>{p.ac}</td><td>{p.pp}</td>
                     <td>{fromCopper(p.gold).gp}g</td>
                     <td className="text-xs">{p.conditions.join(", ") || "—"}</td>
@@ -145,7 +145,7 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
       {tab === "progress" && isDM && (
         <div className="card space-y-3">
           <h3 className="font-display text-gold">XP & Level Management</h3>
-          <p className="text-sm text-[#a9977c]">{sel.length ? `${sel.length} characters selected` : "Entire party"} (select in the Party tab to target)</p>
+          <p className="text-sm text-[#6b5a42]">{sel.length ? `${sel.length} characters selected` : "Entire party"} (select in the Party tab to target)</p>
           <div className="flex flex-wrap gap-2">
             <input className="input max-w-[140px]" placeholder="XP amount" value={xpAmt} onChange={(e) => setXpAmt(e.target.value)} inputMode="numeric" />
             <button className="btn-primary" disabled={busy} onClick={() => post(`/api/campaigns/${campaign.id}/xp`, { amount: parseInt(xpAmt) || 0, characterIds: sel.length ? sel : undefined })}>Award XP</button>
@@ -153,7 +153,7 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
               <button key={v} className="btn-ghost" onClick={() => post(`/api/campaigns/${campaign.id}/xp`, { amount: v, characterIds: sel.length ? sel : undefined })}>+{v}</button>
             ))}
           </div>
-          <div className="text-sm text-[#a9977c]">Level up: use the +L/−L buttons in the Party tab, or award XP and watch for the ⬆ marker.</div>
+          <div className="text-sm text-[#6b5a42]">Level up: use the +L/−L buttons in the Party tab, or award XP and watch for the ⬆ marker.</div>
         </div>
       )}
 
@@ -171,8 +171,8 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
               </div>
             )}
             {isDM && party.length > 0 && (
-              <div className="border-t border-[#241d17] pt-2 text-sm">
-                <div className="mb-1 text-[#a9977c]">Distribute to a player (from the pool):</div>
+              <div className="border-t border-[#e0d4b4] pt-2 text-sm">
+                <div className="mb-1 text-[#6b5a42]">Distribute to a player (from the pool):</div>
                 {party.map((p) => (
                   <div key={p.id} className="flex items-center justify-between py-0.5">
                     <span>{p.name}</span>
@@ -191,10 +191,10 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
                 <button className="btn-gold" disabled={!lootName} onClick={() => { post(`/api/campaigns/${campaign.id}/loot`, { name: lootName }); setLootName(""); }}>Add</button>
               </div>
             )}
-            {loot.length === 0 ? <p className="text-sm text-[#a9977c]">No loot.</p> : (
+            {loot.length === 0 ? <p className="text-sm text-[#6b5a42]">No loot.</p> : (
               <ul className="space-y-1 text-sm">
                 {loot.map((l) => (
-                  <li key={l.id} className="flex items-center justify-between border-t border-[#241d17] py-1">
+                  <li key={l.id} className="flex items-center justify-between border-t border-[#e0d4b4] py-1">
                     <span>{l.name} {l.quantity > 1 ? `×${l.quantity}` : ""}</span>
                     {isDM && (
                       <div className="flex items-center gap-1">
@@ -219,14 +219,14 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
           <h3 className="font-display text-gold">Rest & Recovery</h3>
           {isDM ? (
             <>
-              <p className="text-sm text-[#a9977c]">{sel.length ? `${sel.length} selected` : "Entire party"}</p>
+              <p className="text-sm text-[#6b5a42]">{sel.length ? `${sel.length} selected` : "Entire party"}</p>
               <div className="flex gap-2">
                 <button className="btn-ghost" disabled={busy} onClick={() => post(`/api/campaigns/${campaign.id}/rest`, { type: "SHORT", characterIds: sel.length ? sel : undefined })}>☕ Short Rest</button>
                 <button className="btn-primary" disabled={busy} onClick={() => post(`/api/campaigns/${campaign.id}/rest`, { type: "LONG", characterIds: sel.length ? sel : undefined })}>🌙 Long Rest</button>
               </div>
-              <p className="text-xs text-[#a9977c]">Long Rest: full HP, half Hit Dice restored, all spell slots, resources reset, exhaustion −1. Short Rest: Pact slots + short-rest resources.</p>
+              <p className="text-xs text-[#6b5a42]">Long Rest: full HP, half Hit Dice restored, all spell slots, resources reset, exhaustion −1. Short Rest: Pact slots + short-rest resources.</p>
             </>
-          ) : <p className="text-sm text-[#a9977c]">Only the DM can trigger a party rest.</p>}
+          ) : <p className="text-sm text-[#6b5a42]">Only the DM can trigger a party rest.</p>}
         </div>
       )}
 
@@ -252,10 +252,10 @@ function PlayTab({ campaign, encounters, maps, isDM, onChange }: any) {
     <div className="grid gap-4 md:grid-cols-2">
       <div className="card space-y-2">
         <h3 className="font-display text-gold">Encounters</h3>
-        {encounters.length === 0 ? <p className="text-sm text-[#a9977c]">No encounters yet.</p> : (
+        {encounters.length === 0 ? <p className="text-sm text-[#6b5a42]">No encounters yet.</p> : (
           <ul className="space-y-1 text-sm">
             {encounters.map((e: any) => (
-              <li key={e.id} className="flex justify-between border-t border-[#241d17] py-1">
+              <li key={e.id} className="flex justify-between border-t border-[#e0d4b4] py-1">
                 <Link href={`/play/${e.id}`} className="text-gold hover:underline">{e.name}</Link>
                 <span className="chip">{e.status}</span>
               </li>
@@ -271,10 +271,10 @@ function PlayTab({ campaign, encounters, maps, isDM, onChange }: any) {
       </div>
       <div className="card space-y-2">
         <h3 className="font-display text-gold">Maps</h3>
-        {maps.length === 0 ? <p className="text-sm text-[#a9977c]">No maps. Add one while building an encounter.</p> : (
-          <ul className="text-sm">{maps.map((m: any) => <li key={m.id} className="border-t border-[#241d17] py-1">{m.name}</li>)}</ul>
+        {maps.length === 0 ? <p className="text-sm text-[#6b5a42]">No maps. Add one while building an encounter.</p> : (
+          <ul className="text-sm">{maps.map((m: any) => <li key={m.id} className="border-t border-[#e0d4b4] py-1">{m.name}</li>)}</ul>
         )}
-        {isDM && <p className="text-xs text-[#a9977c]">Maps are created and linked inside the encounter screen (select an encounter → “New Map”).</p>}
+        {isDM && <p className="text-xs text-[#6b5a42]">Maps are created and linked inside the encounter screen (select an encounter → “New Map”).</p>}
       </div>
     </div>
   );

@@ -5,15 +5,16 @@ export default {
   theme: {
     extend: {
       colors: {
-        parchment: "#f4ecd8",
-        ink: "#1b1512",
-        blood: "#7b1e1e",
-        gold: "#c9a227",
-        arcane: "#4b3f72",
-        forest: "#2f4f2f",
+        parchment: "#eee5ce",
+        ink: "#2a1f10",
+        blood: "#8a2018",
+        gold: "#7f6a2c",
+        arcane: "#5a3d8f",
+        forest: "#3f6212",
+        heading: "#58180d",
       },
       fontFamily: {
-        display: ["Georgia", "serif"],
+        display: ["Cinzel", "Iowan Old Style", "Palatino", "Georgia", "serif"],
       },
     },
   },

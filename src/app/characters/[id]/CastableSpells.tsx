@@ -80,7 +80,7 @@ export function CastableSpells({
           {cantrips.map((spell) => (
             <div key={spell.id} className="flex items-center justify-between gap-2 text-sm">
               <span>
-                <b>{spell.name}</b> <span className="text-[11px] text-[#7d6f5c]">· cantrip</span>
+                <b>{spell.name}</b> <span className="text-[11px] text-[#8a7a5f]">· cantrip</span>
                 {spell.concentration ? <span className="text-arcane"> · C</span> : null}
               </span>
               <button type="button" className="btn-ghost" disabled={!canUse}
@@ -100,7 +100,7 @@ export function CastableSpells({
           ))}
         </div>
       )}
-      <div className="mt-2 flex flex-wrap gap-1 text-xs text-[#a9977c]">
+      <div className="mt-2 flex flex-wrap gap-1 text-xs text-[#6b5a42]">
         {spellcasting.slots.map((n, i) => n > 0 && (
           <span key={i} className="chip">L{i + 1}: {slotAvail(i + 1)}/{n}</span>
         ))}
@@ -148,7 +148,7 @@ function LeveledSpellRow({
   return (
     <div className="flex items-center justify-between gap-2 text-sm">
       <span>
-        <b>{spell.name}</b> <span className="text-[11px] text-[#7d6f5c]">· L{spell.level}</span>
+        <b>{spell.name}</b> <span className="text-[11px] text-[#8a7a5f]">· L{spell.level}</span>
         {spell.concentration ? <span className="text-arcane"> · C</span> : null}
       </span>
       <span className="flex items-center gap-1">

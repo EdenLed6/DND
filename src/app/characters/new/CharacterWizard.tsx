@@ -77,7 +77,7 @@ export function CharacterWizard({ campaignId }: { campaignId: string | null }) {
     router.push(`/characters/${c.id}`);
   }
 
-  if (!opts) return <p className="text-[#a9977c]">Loading SRD data...</p>;
+  if (!opts) return <p className="text-[#6b5a42]">Loading SRD data...</p>;
 
   return (
     <div className="space-y-6">
@@ -90,7 +90,7 @@ export function CharacterWizard({ campaignId }: { campaignId: string | null }) {
           ))}
         </div>
         {race && (
-          <div className="mt-3 text-sm text-[#c9bda5]">
+          <div className="mt-3 text-sm text-[#4a3a24]">
             <div>Speed {race.speed}ft · Size {race.size} · Bonuses: {race.abilityBonuses.map((a) => `${a.ability} +${a.bonus}`).join(", ") || "—"}</div>
             <details className="mt-1"><summary className="cursor-pointer text-gold">Racial Traits ({race.traits.length})</summary>
               <ul className="mt-1 list-disc pr-5">{race.traits.map((t) => <li key={t.name}><b>{t.name}:</b> {t.description.slice(0, 120)}…</li>)}</ul>
@@ -108,7 +108,7 @@ export function CharacterWizard({ campaignId }: { campaignId: string | null }) {
           ))}
         </div>
         {klass && (
-          <div className="mt-3 text-sm text-[#c9bda5]">
+          <div className="mt-3 text-sm text-[#4a3a24]">
             Hit die d{klass.hitDie} · Saving Throws: {klass.savingThrows.join(", ")} {klass.spellcastingAbility ? `· Spellcaster (${klass.spellcastingAbility})` : ""}
           </div>
         )}
@@ -123,12 +123,12 @@ export function CharacterWizard({ campaignId }: { campaignId: string | null }) {
               {m === "standard" ? "Standard Array" : m === "pointbuy" ? "Point Buy" : "Manual"}
             </button>
           ))}
-          {method === "pointbuy" && <span className={`chip ${pointsUsed > 27 ? "text-red-400" : "text-gold"}`}>Points: {pointsUsed}/27</span>}
+          {method === "pointbuy" && <span className={`chip ${pointsUsed > 27 ? "text-red-700" : "text-gold"}`}>Points: {pointsUsed}/27</span>}
         </div>
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
           {ABILITIES.map((a) => (
             <div key={a} className="stat-box">
-              <div className="text-xs uppercase text-[#a9977c]">{a}</div>
+              <div className="text-xs uppercase text-[#6b5a42]">{a}</div>
               {method === "standard" ? (
                 <select className="input mt-1 text-center" value={base[a]} onChange={(e) => setBase((b) => ({ ...b, [a]: Number(e.target.value) }))}>
                   {[8, 10, 12, 13, 14, 15].map((v) => <option key={v} value={v}>{v}</option>)}
@@ -138,13 +138,13 @@ export function CharacterWizard({ campaignId }: { campaignId: string | null }) {
                   className="input mt-1 text-center" value={base[a]}
                   onChange={(e) => setBase((b) => ({ ...b, [a]: Number(e.target.value) }))} />
               )}
-              <div className="mt-1 text-xs text-[#a9977c]">
-                {racial[a] ? `+${racial[a]} → ` : ""}<b className="text-parchment">{finalScores[a]}</b> ({formatMod(abilityMod(finalScores[a]))})
+              <div className="mt-1 text-xs text-[#6b5a42]">
+                {racial[a] ? `+${racial[a]} → ` : ""}<b className="text-ink">{finalScores[a]}</b> ({formatMod(abilityMod(finalScores[a]))})
               </div>
             </div>
           ))}
         </div>
-        {method === "standard" && <p className="mt-2 text-xs text-[#a9977c]">Array: 15,14,13,12,10,8 — assign a value to each ability.</p>}
+        {method === "standard" && <p className="mt-2 text-xs text-[#6b5a42]">Array: 15,14,13,12,10,8 — assign a value to each ability.</p>}
       </section>
 
       {/* Background */}
@@ -155,7 +155,7 @@ export function CharacterWizard({ campaignId }: { campaignId: string | null }) {
             <button key={b.id} onClick={() => setBgId(b.id)} className={bgId === b.id ? "btn-gold" : "btn-ghost"}>{b.name}</button>
           ))}
         </div>
-        {bg && <div className="mt-3 text-sm text-[#c9bda5]">Skills: {bg.skills.join(", ")} · Starting gold {bg.startGp}gp · <b>{bg.featureName}</b></div>}
+        {bg && <div className="mt-3 text-sm text-[#4a3a24]">Skills: {bg.skills.join(", ")} · Starting gold {bg.startGp}gp · <b>{bg.featureName}</b></div>}
       </section>
 
       {/* Skills */}
@@ -188,7 +188,7 @@ export function CharacterWizard({ campaignId }: { campaignId: string | null }) {
         </select>
       </section>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-700">{error}</p>}
       <button className="btn-primary w-full text-lg" disabled={!canSubmit || busy} onClick={submit}>
         {busy ? "Creating..." : "✨ Create Character"}
       </button>

@@ -20,7 +20,7 @@ export function ResourcePanel({ resources, canUse, onSetUsed }: ResourcePanelPro
             <div className="flex items-center justify-between text-sm">
               <span>
                 <b>{r.name}</b>
-                {r.unit ? <span className="text-[11px] text-[#7d6f5c]"> · {r.unit}</span> : null}
+                {r.unit ? <span className="text-[11px] text-[#8a7a5f]"> · {r.unit}</span> : null}
                 {r.note ? <span className="muted"> · {r.note}</span> : null}
               </span>
               <span className="flex items-center gap-2">
@@ -34,11 +34,11 @@ export function ResourcePanel({ resources, canUse, onSetUsed }: ResourcePanelPro
                 {Array.from({ length: r.max }).map((_, i) => (
                   <button key={i} disabled={!canUse}
                     onClick={() => onSetUsed(r.key, i < r.used ? i : i + 1)}
-                    className={`h-4 w-4 rounded-full border ${i < r.used ? "bg-[#0f0c0a] border-[#3a2f24]" : "bg-gold border-gold"}`}
+                    className={`h-4 w-4 rounded-full border ${i < r.used ? "bg-[#f1e8d0] border-[#cdb98c]" : "bg-gold border-gold"}`}
                     title={i < r.used ? "used" : "available"} />
                 ))}
               </div>
-              <span className="text-xs text-[#a9977c]">{r.used}/{r.max}</span>
+              <span className="text-xs text-[#6b5a42]">{r.used}/{r.max}</span>
             </div>
           </div>
         ))}

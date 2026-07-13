@@ -25,18 +25,18 @@ export default function ForgotPage() {
         </div>
         {sent ? (
           <div className="text-center">
-            <p className="text-sm text-[#c9bda5]">If an account exists for <b>{email}</b>, we've sent a password reset link. Check your inbox (and spam).</p>
+            <p className="text-sm text-[#4a3a24]">If an account exists for <b>{email}</b>, we've sent a password reset link. Check your inbox (and spam).</p>
             <Link href="/login" className="btn-ghost mt-4 inline-flex">Back to sign in</Link>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-3">
-            <p className="text-sm text-[#a9977c]">Enter your email and we'll send you a reset link.</p>
+            <p className="text-sm text-[#6b5a42]">Enter your email and we'll send you a reset link.</p>
             <div>
               <label className="label">Email</label>
               <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
             <button className="btn-primary w-full" disabled={busy}>{busy ? "..." : "Send reset link"}</button>
-            <Link href="/login" className="block text-center text-xs text-[#a9977c] hover:text-gold">Back to sign in</Link>
+            <Link href="/login" className="block text-center text-xs text-[#6b5a42] hover:text-gold">Back to sign in</Link>
           </form>
         )}
       </div>

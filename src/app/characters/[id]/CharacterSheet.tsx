@@ -181,20 +181,20 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
         <div className="flex items-center gap-3">
           <button
             onClick={() => { if (!canEditDef) return; const url = window.prompt("Avatar image URL (blank to clear):", c.avatarUrl ?? ""); if (url !== null) patch({ avatarUrl: url || null }); }}
-            className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#3a2f24] bg-[#0f0c0a] text-2xl"
+            className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#cdb98c] bg-[#f1e8d0] text-2xl"
             title={canEditDef ? "Set avatar" : undefined} aria-label="Avatar">
             {c.avatarUrl ? <img src={c.avatarUrl} alt="" className="h-full w-full object-cover" /> : "🧙"}
           </button>
           <div>
             <h1 className="font-display text-2xl text-gold">{c.name}</h1>
-            <div className="text-sm text-[#a9977c]">
+            <div className="text-sm text-[#6b5a42]">
               {c.raceId}{c.subrace ? ` (${c.subrace})` : ""} · {c.classes.map((cl: any) => `${cl.classId} ${cl.level}${cl.subclass ? ` (${cl.subclass})` : ""}`).join(" / ")} · {c.background} · {c.alignment}
             </div>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-4">
           {canEdit && (
-            <div className="tabbar rounded-full border border-[#3a2f24] p-0.5" role="group" aria-label="Sheet mode">
+            <div className="tabbar rounded-full border border-[#cdb98c] p-0.5" role="group" aria-label="Sheet mode">
               <button type="button" onClick={() => setEditMode(false)}
                 className="tab" data-active={!editMode} aria-pressed={!editMode} title="Use the character">▶ Play</button>
               <button type="button" onClick={() => setEditMode(true)}
@@ -202,13 +202,13 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
             </div>
           )}
           <div className="text-center">
-            <div className="text-xs text-[#a9977c]">Level</div>
+            <div className="text-xs text-[#6b5a42]">Level</div>
             <div className="font-display text-2xl text-gold">{derived.totalLevel}</div>
           </div>
           <div className="min-w-[160px]">
-            <div className="flex justify-between text-xs text-[#a9977c]"><span>XP</span><span>{c.xp}{xpInfo.next ? ` / ${xpInfo.next}` : ""}</span></div>
-            <div className="mt-1 h-2 rounded bg-[#0f0c0a]"><div className="h-2 rounded bg-gold" style={{ width: `${xpInfo.pct}%` }} /></div>
-            {canLevelUp && <div className="mt-1 text-xs text-green-400">⬆ Level up available (L{levelForXp(c.xp)})</div>}
+            <div className="flex justify-between text-xs text-[#6b5a42]"><span>XP</span><span>{c.xp}{xpInfo.next ? ` / ${xpInfo.next}` : ""}</span></div>
+            <div className="mt-1 h-2 rounded bg-[#f1e8d0]"><div className="h-2 rounded bg-gold" style={{ width: `${xpInfo.pct}%` }} /></div>
+            {canLevelUp && <div className="mt-1 text-xs text-green-700">⬆ Level up available (L{levelForXp(c.xp)})</div>}
           </div>
           {canEditDef && <button onClick={() => setShowLevelUp(true)} className={canLevelUp ? "btn-gold" : "btn-ghost"} title="Level Up">⬆ Level Up</button>}
           <button onClick={() => canUse && patch({ inspiration: !c.inspiration })}
@@ -231,7 +231,7 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
         />
       )}
 
-      <div className="tabbar w-fit rounded-full border border-[#3a2f24] p-0.5" role="tablist" aria-label="Sheet section">
+      <div className="tabbar w-fit rounded-full border border-[#cdb98c] p-0.5" role="tablist" aria-label="Sheet section">
         <button type="button" className="tab" data-active={tab === "sheet"} aria-pressed={tab === "sheet"} onClick={() => setTab("sheet")}>Sheet</button>
         <button type="button" className="tab" data-active={tab === "background"} aria-pressed={tab === "background"} onClick={() => setTab("background")}>Background</button>
       </div>
@@ -245,19 +245,19 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
         {/* Left column: abilities + saves + skills */}
         <div className="space-y-4">
           <div className="card">
-            <div className="mb-2 text-xs uppercase text-[#a9977c]">Proficiency Bonus <b className="text-gold">{formatMod(derived.proficiencyBonus)}</b></div>
+            <div className="mb-2 text-xs uppercase text-[#6b5a42]">Proficiency Bonus <b className="text-gold">{formatMod(derived.proficiencyBonus)}</b></div>
             <div className="grid grid-cols-3 gap-2">
               {ABILITIES.map((a) => (
                 <button key={a} type="button" className="stat-box rollable"
                   onClick={() => rollToTray(`${ABILITY_LABELS[a]} check`, `1d20${formatMod(derived.mods[a])}`)}
                   title={`Roll ${ABILITY_LABELS[a]} check`}>
-                  <div className="text-[10px] uppercase text-[#a9977c]">{ABILITY_LABELS[a]}</div>
+                  <div className="text-[10px] uppercase text-[#6b5a42]">{ABILITY_LABELS[a]}</div>
                   <div className="font-display text-xl">{formatMod(derived.mods[a])}</div>
-                  <div className="text-xs text-[#a9977c]">{(c as any)[a]}</div>
+                  <div className="text-xs text-[#6b5a42]">{(c as any)[a]}</div>
                 </button>
               ))}
             </div>
-            <p className="mt-2 text-center text-[11px] text-[#7d6f5c]">Tap an ability to roll a check.</p>
+            <p className="mt-2 text-center text-[11px] text-[#8a7a5f]">Tap an ability to roll a check.</p>
           </div>
 
           <div className="card">
@@ -283,13 +283,13 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
                   <tr key={name} className="rollable" onClick={() => rollToTray(name, `1d20${formatMod(s.value)}`)} title={`Roll ${name}`}>
                     <td className="w-6">{s.expertise ? "◆" : s.proficient ? "●" : "○"}</td>
                     <td>{name}</td>
-                    <td className="text-[#a9977c]">{s.ability.toUpperCase()}</td>
+                    <td className="text-[#6b5a42]">{s.ability.toUpperCase()}</td>
                     <td className="text-right"><b>{formatMod(s.value)}</b></td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="mt-2 flex gap-2 text-xs text-[#a9977c]">
+            <div className="mt-2 flex gap-2 text-xs text-[#6b5a42]">
               <span className="chip">Passive Perception {10 + derived.skills.Perception.value}</span>
               <span className="chip">Insight {10 + derived.skills.Insight.value}</span>
             </div>
@@ -302,19 +302,19 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
         {/* Middle column: combat */}
         <div className="space-y-4">
           <div className="card grid grid-cols-3 gap-2 text-center">
-            <div className="stat-box"><div className="text-[10px] text-[#a9977c]">AC</div><div className="font-display text-2xl text-gold">{derived.ac}</div></div>
+            <div className="stat-box"><div className="text-[10px] text-[#6b5a42]">AC</div><div className="font-display text-2xl text-gold">{derived.ac}</div></div>
             <button type="button" className="stat-box rollable"
               onClick={() => rollToTray("Initiative", `1d20${formatMod(derived.initiative)}`)} title="Roll initiative">
-              <div className="text-[10px] text-[#a9977c]">Initiative</div><div className="font-display text-2xl">{formatMod(derived.initiative)}</div>
+              <div className="text-[10px] text-[#6b5a42]">Initiative</div><div className="font-display text-2xl">{formatMod(derived.initiative)}</div>
             </button>
-            <div className="stat-box"><div className="text-[10px] text-[#a9977c]">Speed</div><div className="font-display text-2xl">{derived.speed}</div></div>
+            <div className="stat-box"><div className="text-[10px] text-[#6b5a42]">Speed</div><div className="font-display text-2xl">{derived.speed}</div></div>
           </div>
 
           <div className="card">
             <h3 className="mb-1 font-display text-gold">Attacks</h3>
-            <p className="mb-2 text-[11px] text-[#7d6f5c]">Tap an attack to roll to-hit and damage.</p>
+            <p className="mb-2 text-[11px] text-[#8a7a5f]">Tap an attack to roll to-hit and damage.</p>
             {weapons.length === 0 ? (
-              <p className="text-sm text-[#a9977c]">No weapons equipped. Equip one in your inventory.</p>
+              <p className="text-sm text-[#6b5a42]">No weapons equipped. Equip one in your inventory.</p>
             ) : (
               <div className="space-y-1 text-sm">
                 {weapons.map((w, i) => {
@@ -326,10 +326,10 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
                       title={`Attack with ${w.name}`}>
                       <span>
                         <b>{w.name}</b>{" "}
-                        <span className="text-[11px] text-[#7d6f5c]">· {w.ranged ? "Ranged" : "Melee"}{w.properties ? ` · ${w.properties}` : ""}</span>
+                        <span className="text-[11px] text-[#8a7a5f]">· {w.ranged ? "Ranged" : "Melee"}{w.properties ? ` · ${w.properties}` : ""}</span>
                       </span>
                       <span className="flex items-center gap-3 whitespace-nowrap">
-                        <span>{formatMod(atk.toHit)} <span className="text-[10px] text-[#7d6f5c]">hit</span></span>
+                        <span>{formatMod(atk.toHit)} <span className="text-[10px] text-[#8a7a5f]">hit</span></span>
                         <span className="text-gold">{w.damageDice}{formatMod(atk.abMod)} {w.damageType}</span>
                       </span>
                     </button>
@@ -342,13 +342,13 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
           <div className="card">
             <div className="mb-1 flex items-end justify-between">
               <h3 className="font-display text-gold">Hit Points</h3>
-              <div className="text-sm text-[#a9977c]">Temp: {c.tempHp}</div>
+              <div className="text-sm text-[#6b5a42]">Temp: {c.tempHp}</div>
             </div>
             <div className="mb-2 flex items-center justify-center gap-2">
               <span className="font-display text-4xl">{c.currentHp}</span>
-              <span className="text-2xl text-[#a9977c]">/ {derived.maxHp}</span>
+              <span className="text-2xl text-[#6b5a42]">/ {derived.maxHp}</span>
             </div>
-            <div className="h-3 rounded bg-[#0f0c0a]"><div className="h-3 rounded bg-blood" style={{ width: `${Math.round((c.currentHp / derived.maxHp) * 100)}%` }} /></div>
+            <div className="h-3 rounded bg-[#f1e8d0]"><div className="h-3 rounded bg-blood" style={{ width: `${Math.round((c.currentHp / derived.maxHp) * 100)}%` }} /></div>
             {canUse && (
               <div className="mt-3 flex gap-2">
                 <input className="input" placeholder="Amount" value={dmg} onChange={(e) => setDmg(e.target.value)} inputMode="numeric" />
@@ -360,8 +360,8 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
             <div className="mt-3 flex items-center justify-between text-sm">
               <div>Hit Dice: {c.hitDiceUsed}/{derived.hitDiceTotal.reduce((s, h) => s + h.count, 0)} ({derived.hitDiceTotal.map((h) => `${h.count}d${h.die}`).join(" ")})</div>
               <div className="flex items-center gap-1">Death:
-                <span className="text-green-400">{"✓".repeat(c.deathSuccess)}{"·".repeat(3 - c.deathSuccess)}</span>
-                <span className="text-red-400">{"✗".repeat(c.deathFail)}{"·".repeat(3 - c.deathFail)}</span>
+                <span className="text-green-700">{"✓".repeat(c.deathSuccess)}{"·".repeat(3 - c.deathSuccess)}</span>
+                <span className="text-red-700">{"✗".repeat(c.deathFail)}{"·".repeat(3 - c.deathFail)}</span>
               </div>
             </div>
             {canUse && c.currentHp === 0 && (
@@ -387,7 +387,7 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
               {canUse && <button className="btn-ghost" onClick={() => patch({ exhaustion: Math.max(0, c.exhaustion - 1) })}>−</button>}
               <b className="text-gold">{c.exhaustion}</b>
               {canUse && <button className="btn-ghost" onClick={() => patch({ exhaustion: Math.min(6, c.exhaustion + 1) })}>+</button>}
-              <span className="text-xs text-[#a9977c]">{EXHAUSTION_EFFECTS[c.exhaustion]}</span>
+              <span className="text-xs text-[#6b5a42]">{EXHAUSTION_EFFECTS[c.exhaustion]}</span>
             </div>
             {c.concentration && <div className="mt-2 text-sm text-arcane">🔵 Concentrating: {c.concentration}</div>}
           </div>
@@ -445,7 +445,7 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
             <div className="grid grid-cols-5 gap-1 text-center text-sm">
               {(["pp","gp","ep","sp","cp"] as const).map((coin) => (
                 <div key={coin} className="stat-box">
-                  <div className="text-[10px] uppercase text-[#a9977c]">{coin}</div>
+                  <div className="text-[10px] uppercase text-[#6b5a42]">{coin}</div>
                   {canUse ? (
                     <input className="w-full bg-transparent text-center outline-none" type="number" min={0}
                       value={(c as any)[coin]} onChange={(e) => setC((p: any) => ({ ...p, [coin]: Math.max(0, +e.target.value) }))}
@@ -486,7 +486,7 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
       </div>
       </>)}
 
-      {isDM && <div className="text-center text-xs text-[#a9977c]">👑 DM Mode — you have full control over this character</div>}
+      {isDM && <div className="text-center text-xs text-[#6b5a42]">👑 DM Mode — you have full control over this character</div>}
     </main>
   );
 }
@@ -494,16 +494,16 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
 function SlotRow({ level, total, used, canEdit, onChange }: { level: number; total: number; used: number; canEdit: boolean; onChange: (u: number) => void }) {
   return (
     <div className="flex items-center gap-2 text-sm">
-      <span className="w-16 text-[#a9977c]">Level {level}</span>
+      <span className="w-16 text-[#6b5a42]">Level {level}</span>
       <div className="flex gap-1">
         {Array.from({ length: total }).map((_, i) => (
           <button key={i} disabled={!canEdit}
             onClick={() => onChange(i < used ? i : i + 1)}
-            className={`h-4 w-4 rounded-full border ${i < used ? "bg-[#0f0c0a] border-[#3a2f24]" : "bg-gold border-gold"}`}
+            className={`h-4 w-4 rounded-full border ${i < used ? "bg-[#f1e8d0] border-[#cdb98c]" : "bg-gold border-gold"}`}
             title={i < used ? "used" : "available"} />
         ))}
       </div>
-      <span className="text-xs text-[#a9977c]">{total - used}/{total}</span>
+      <span className="text-xs text-[#6b5a42]">{total - used}/{total}</span>
     </div>
   );
 }

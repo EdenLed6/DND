@@ -31,7 +31,7 @@ function ResetForm() {
   if (!token) {
     return (
       <div className="text-center">
-        <p className="text-sm text-red-400">Missing or invalid reset link.</p>
+        <p className="text-sm text-red-700">Missing or invalid reset link.</p>
         <Link href="/forgot" className="btn-ghost mt-4 inline-flex">Request a new link</Link>
       </div>
     );
@@ -42,13 +42,13 @@ function ResetForm() {
       <div>
         <label className="label">New Password</label>
         <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
-        <p className="mt-1 text-xs text-[#7d6f5c]">At least 8 characters.</p>
+        <p className="mt-1 text-xs text-[#8a7a5f]">At least 8 characters.</p>
       </div>
       <div>
         <label className="label">Confirm Password</label>
         <input className="input" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={8} />
       </div>
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-700">{error}</p>}
       <button className="btn-primary w-full" disabled={busy}>{busy ? "..." : "Set new password"}</button>
     </form>
   );
@@ -62,7 +62,7 @@ export default function ResetPage() {
           <div className="text-4xl">🔒</div>
           <h1 className="font-display text-2xl text-gold">Choose a new password</h1>
         </div>
-        <Suspense fallback={<p className="text-center text-sm text-[#a9977c]">Loading…</p>}>
+        <Suspense fallback={<p className="text-center text-sm text-[#6b5a42]">Loading…</p>}>
           <ResetForm />
         </Suspense>
       </div>

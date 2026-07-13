@@ -68,7 +68,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <footer className="border-t border-[#2a2119] py-6 text-center text-xs text-[#7d6f5c]">
+      <footer className="border-t border-[#e0d4b4] py-6 text-center text-xs text-[#8a7a5f]">
         Includes material from the System Reference Document 5.1, © Wizards of the Coast, licensed under CC-BY-4.0.
       </footer>
     </div>

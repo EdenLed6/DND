@@ -3,28 +3,34 @@
 @tailwind utilities;
 
 /* ============================================================
-   Design tokens — dark-fantasy "grimoire" theme
+   Design tokens — light "sourcebook" theme.
+   Modeled on the official 5e books: warm parchment pages, cream
+   plates, deep-maroon small-cap headings over thin gold rules,
+   antique-gold accents, subtle paper grain.
    ============================================================ */
 :root {
-  color-scheme: dark;
-  --bg: #120f0d;
-  --bg-2: #18130f;
-  --panel: #1c1712;
-  --panel-2: #221b15;
-  --line: #3a2f24;
-  --line-soft: #2a2119;
-  --ink: #ece5d8;
-  --ink-dim: #a9977c;
-  --ink-faint: #7d6f5c;
-  --gold: #c9a227;
-  --gold-bright: #e6c04a;
-  --blood: #8b2020;
-  --blood-bright: #a83232;
-  --arcane: #6a5aa0;
-  --forest: #3a5a3a;
-  --radius: 12px;
-  --radius-sm: 8px;
-  --shadow: 0 10px 30px rgba(0,0,0,.45);
+  color-scheme: light;
+  --bg: #eee5ce;            /* page parchment */
+  --panel: #faf4e3;         /* card cream */
+  --panel-2: #f6eed9;
+  --inset: #f1e8d0;         /* inset wells */
+  --line: #cdb98c;          /* gold-tan border */
+  --line-soft: #e0d4b4;     /* hairline */
+  --ink: #2a1f10;           /* body text — warm near-black */
+  --ink-dim: #6b5a42;       /* secondary text */
+  --ink-faint: #8a7a5f;     /* tertiary text */
+  --heading: #58180d;       /* PHB maroon for display headings */
+  --gold: #b28d4e;          /* antique gold (borders, buttons) */
+  --gold-bright: #d3b271;
+  --gold-rule: #c9ad6a;     /* the thin rule under headings */
+  --gold-text: #7f6a2c;     /* gold that reads as text on cream */
+  --blood: #8a2018;
+  --blood-bright: #a3312a;
+  --arcane: #5a3d8f;
+  --forest: #3f6212;
+  --radius: 10px;
+  --radius-sm: 7px;
+  --shadow: 0 1px 2px rgba(88, 52, 10, .10), 0 8px 22px rgba(88, 52, 10, .10);
   --tap: 44px; /* min touch target */
 }
 
@@ -32,46 +38,70 @@
 
 html { -webkit-text-size-adjust: 100%; }
 
+/* Parchment page: warm base, soft tonal blotches, fine paper grain. */
 body {
   background:
-    radial-gradient(1200px 800px at 80% -10%, rgba(106,90,160,.10), transparent 60%),
-    radial-gradient(1000px 700px at -10% 110%, rgba(139,32,32,.10), transparent 55%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.05'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E"),
+    radial-gradient(1100px 700px at 85% -5%, rgba(178, 141, 78, .14), transparent 60%),
+    radial-gradient(900px 650px at -10% 105%, rgba(138, 32, 24, .07), transparent 55%),
+    radial-gradient(1400px 900px at 50% 40%, rgba(255, 252, 240, .55), transparent 70%),
     var(--bg);
   color: var(--ink);
-  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: "Alegreya Sans", "Gill Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
   min-height: 100dvh;
 }
 
-.font-display { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif; letter-spacing: .2px; }
+.font-display {
+  font-family: "Cinzel", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  letter-spacing: .02em;
+}
+
+/* Display headings render in the books' deep maroon (overrides text-gold
+   wherever the two classes appear together — i.e. every heading). */
+.font-display.text-gold { color: var(--heading); }
+
+/* PHB-style thin gold rule under card headings. */
+.card > h3.font-display, .card > div > h3.font-display {
+  border-bottom: 1.5px solid var(--gold-rule);
+  padding-bottom: .3rem;
+}
 
 /* Accessible focus ring everywhere */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid var(--gold-bright);
+  outline: 2px solid var(--blood-bright);
   outline-offset: 2px;
   border-radius: 6px;
 }
 
 /* ============================================================
-   Surfaces
+   Surfaces — cream plates with a fine double frame
    ============================================================ */
 .parchment-panel, .card {
-  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  background: linear-gradient(180deg, var(--panel), var(--panel-2));
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  box-shadow: inset 0 0 0 1px rgba(255, 253, 245, .65), var(--shadow);
 }
-.card { padding: 1rem; box-shadow: var(--shadow); }
+.card { padding: 1rem; }
 @media (max-width: 640px) { .card { padding: .85rem; border-radius: var(--radius-sm); } }
 
-.panel-inset { background: #0f0c0a; border: 1px solid var(--line-soft); border-radius: var(--radius-sm); }
+.panel-inset { background: var(--inset); border: 1px solid var(--line-soft); border-radius: var(--radius-sm); }
 
 .stat-box {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   border-radius: var(--radius-sm); border: 1px solid var(--line);
-  background: linear-gradient(180deg, #201a15, #17120e);
+  background: linear-gradient(180deg, #fdf8ea, var(--inset));
+  box-shadow: inset 0 0 0 1px rgba(255, 253, 245, .6);
   padding: .5rem .5rem;
 }
 
 .hairline { border-top: 1px solid var(--line-soft); }
+
+/* Ornamental divider — thin gold line swelling at the center. */
+.rule-gold {
+  height: 2px; border: 0; margin: .4rem 0;
+  background: linear-gradient(90deg, transparent, var(--gold-rule) 12%, var(--gold-rule) 88%, transparent);
+}
 
 /* ============================================================
    Buttons — min 44px touch target, clear states
@@ -86,15 +116,14 @@ body {
 .btn:active { transform: translateY(1px); }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 
-.btn-primary { composes: btn; }
-.btn-primary { background: linear-gradient(180deg, var(--blood-bright), var(--blood)); color: #fff; border: 1px solid #5e1515; }
+.btn-primary { background: linear-gradient(180deg, var(--blood-bright), var(--blood)); color: #fdf6e8; border: 1px solid #6d1812; box-shadow: inset 0 1px 0 rgba(255,255,255,.18); }
 .btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
 
-.btn-gold { background: linear-gradient(180deg, var(--gold-bright), var(--gold)); color: #1a1206; border: 1px solid #8a6d14; }
-.btn-gold:hover:not(:disabled) { filter: brightness(1.06); }
+.btn-gold { background: linear-gradient(180deg, #dcc084, var(--gold)); color: #2a1c07; border: 1px solid #97783c; box-shadow: inset 0 1px 0 rgba(255,255,255,.35); }
+.btn-gold:hover:not(:disabled) { filter: brightness(1.05); }
 
-.btn-ghost { background: rgba(255,255,255,.02); border: 1px solid var(--line); color: var(--ink); }
-.btn-ghost:hover:not(:disabled) { background: rgba(255,255,255,.06); border-color: var(--gold); }
+.btn-ghost { background: #fbf6e9; border: 1px solid var(--line); color: var(--ink); }
+.btn-ghost:hover:not(:disabled) { background: #f4ead2; border-color: var(--gold); }
 
 /* allow small dense buttons in toolbars while keeping desktop tidy */
 .btn-primary, .btn-gold, .btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: .35rem;
@@ -109,37 +138,40 @@ body {
 .input {
   width: 100%; min-height: var(--tap);
   border-radius: var(--radius-sm); border: 1px solid var(--line);
-  background: #0f0c0a; color: var(--ink); padding: .55rem .7rem; outline: none;
+  background: #fdf9ee; color: var(--ink); padding: .55rem .7rem; outline: none;
   font-size: 16px; /* prevents iOS zoom-on-focus */
+  box-shadow: inset 0 1px 3px rgba(88, 52, 10, .07);
 }
-.input:focus { border-color: var(--gold); }
-.label { display: block; font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-dim); margin-bottom: .3rem; }
+.input:focus { border-color: var(--gold-text); background: #fffdf6; }
+.input::placeholder { color: var(--ink-faint); }
+.label { display: block; font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-dim); margin-bottom: .3rem; font-weight: 600; }
 
 .chip {
   display: inline-flex; align-items: center; gap: .25rem;
-  border-radius: 999px; border: 1px solid var(--line); background: #1b1613;
+  border-radius: 999px; border: 1px solid #d8c69a; background: #f4ebd3;
   padding: .12rem .55rem; font-size: .72rem; color: var(--ink);
 }
-.chip-gold { background: rgba(201,162,39,.15); border-color: var(--gold); color: var(--gold-bright); }
+.chip-gold { background: rgba(178, 141, 78, .18); border-color: var(--gold); color: #6a4f14; }
 
 /* ============================================================
    Tabs / segmented control
    ============================================================ */
-.tabbar { display: flex; gap: .35rem; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.tabbar { display: flex; gap: .35rem; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; background: #f4ebd3; }
 .tabbar::-webkit-scrollbar { display: none; }
 .tab {
   flex: 0 0 auto; min-height: 40px; padding: .45rem .8rem; border-radius: 999px;
-  border: 1px solid var(--line); background: rgba(255,255,255,.02); color: var(--ink-dim);
+  border: 1px solid transparent; background: transparent; color: var(--ink-dim);
   font-size: .85rem; font-weight: 600; cursor: pointer;
 }
-.tab[data-active="true"] { background: linear-gradient(180deg, var(--gold-bright), var(--gold)); color: #1a1206; border-color: #8a6d14; }
+.tab[data-active="true"] { background: linear-gradient(180deg, var(--blood-bright), var(--blood)); color: #fdf6e8; border-color: #6d1812; }
 
 /* ============================================================
    Tables that collapse to cards on mobile
    ============================================================ */
 table.sheet { width: 100%; font-size: .875rem; border-collapse: collapse; }
-table.sheet th { text-align: left; color: var(--ink-dim); font-weight: 500; padding: .3rem .5rem; }
+table.sheet th { text-align: left; color: var(--heading); font-weight: 700; padding: .3rem .5rem; border-bottom: 1.5px solid var(--gold-rule); }
 table.sheet td { padding: .3rem .5rem; border-top: 1px solid var(--line-soft); }
+table.sheet tbody tr:nth-child(even) { background: rgba(178, 141, 78, .07); }
 
 /* ============================================================
    Bottom navigation (mobile) + safe areas
@@ -147,15 +179,16 @@ table.sheet td { padding: .3rem .5rem; border-top: 1px solid var(--line-soft); }
 .bottom-nav {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
   display: flex; justify-content: space-around; align-items: stretch;
-  background: rgba(20,16,13,.96); backdrop-filter: blur(8px);
-  border-top: 1px solid var(--line);
+  background: rgba(250, 244, 227, .97); backdrop-filter: blur(8px);
+  border-top: 1.5px solid var(--gold-rule);
+  box-shadow: 0 -6px 18px rgba(88, 52, 10, .12);
   padding-bottom: env(safe-area-inset-bottom);
 }
 .bottom-nav a {
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   min-height: 56px; font-size: .68rem; color: var(--ink-dim); text-decoration: none;
 }
-.bottom-nav a[data-active="true"] { color: var(--gold-bright); }
+.bottom-nav a[data-active="true"] { color: var(--heading); font-weight: 700; }
 .bottom-nav .ico { font-size: 1.2rem; line-height: 1; }
 .has-bottom-nav { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
 /* Ensure page content clears the mobile bottom nav */
@@ -164,7 +197,7 @@ table.sheet td { padding: .3rem .5rem; border-top: 1px solid var(--line-soft); }
 /* ============================================================
    Modal / bottom-sheet
    ============================================================ */
-.overlay { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.65); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.overlay { position: fixed; inset: 0; z-index: 50; background: rgba(42, 25, 8, .45); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; padding: 1rem; }
 .modal { width: 100%; max-width: 34rem; max-height: 88vh; overflow-y: auto; }
 @media (max-width: 640px) {
   .overlay { align-items: flex-end; padding: 0; }
@@ -175,33 +208,33 @@ table.sheet td { padding: .3rem .5rem; border-top: 1px solid var(--line-soft); }
    Battle grid
    ============================================================ */
 .grid-overlay {
-  background-image: linear-gradient(rgba(255,255,255,.12) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(255,255,255,.12) 1px, transparent 1px);
+  background-image: linear-gradient(rgba(42, 25, 8, .18) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(42, 25, 8, .18) 1px, transparent 1px);
 }
 
 /* HP / progress bars */
-.meter { height: .5rem; border-radius: 999px; background: #0f0c0a; overflow: hidden; }
+.meter { height: .5rem; border-radius: 999px; background: #e2d5b4; overflow: hidden; box-shadow: inset 0 1px 2px rgba(88,52,10,.15); }
 .meter > span { display: block; height: 100%; border-radius: 999px; }
 
 /* Utility */
 .muted { color: var(--ink-dim); }
 .faint { color: var(--ink-faint); }
-.link-gold { color: var(--gold-bright); }
+.link-gold { color: var(--heading); font-weight: 600; }
 .link-gold:hover { text-decoration: underline; }
 .scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
 /* Click-to-roll affordance on the character sheet */
 .rollable { cursor: pointer; transition: background .1s ease, border-color .1s ease; }
-.rollable:hover { border-color: var(--gold) !important; background: rgba(201,162,39,.07); }
+.rollable:hover { border-color: var(--blood-bright) !important; background: rgba(138, 32, 24, .06); }
 
 /* ============================================================
    Dice tray + roll log (D&D Beyond-style)
    ============================================================ */
 .dice-tray {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
-  background: linear-gradient(180deg, rgba(24,19,15,.97), rgba(18,15,13,.99));
-  border-top: 1px solid var(--line);
-  box-shadow: 0 -12px 30px rgba(0,0,0,.5);
+  background: linear-gradient(180deg, rgba(250, 244, 227, .97), rgba(244, 235, 211, .99));
+  border-top: 1.5px solid var(--gold-rule);
+  box-shadow: 0 -10px 26px rgba(88, 52, 10, .18);
   padding-bottom: env(safe-area-inset-bottom);
 }
 .dice-tray-handle {
@@ -211,7 +244,7 @@ table.sheet td { padding: .3rem .5rem; border-top: 1px solid var(--line-soft); }
   border: none; background: transparent; color: inherit;
   border-bottom: 1px solid var(--line-soft);
 }
-.dice-tray-title { font-size: 12px; font-weight: 600; color: var(--gold); letter-spacing: .04em; }
+.dice-tray-title { font-size: 12px; font-weight: 700; color: var(--heading); letter-spacing: .06em; }
 .dice-tray.is-collapsed .dice-tray-inner,
 .dice-tray.is-collapsed .dice-tray-quick { display: none; }
 
@@ -226,33 +259,33 @@ table.sheet td { padding: .3rem .5rem; border-top: 1px solid var(--line-soft); }
 .dice-tray-main { display: flex; align-items: center; gap: 16px; min-height: 108px; padding: 12px 16px; }
 .dice-tray-dice { display: flex; gap: 10px; align-items: center; min-width: 110px; flex-wrap: wrap; }
 .dice-tray-info { flex: 1; min-width: 0; }
-.dice-tray-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-faint); }
-.dice-tray-total { font-family: "Iowan Old Style", Palatino, Georgia, serif; font-size: 42px; line-height: 1; color: var(--gold-bright); }
+.dice-tray-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-faint); font-weight: 700; }
+.dice-tray-total { font-family: "Cinzel", "Iowan Old Style", Palatino, Georgia, serif; font-size: 42px; line-height: 1; color: var(--heading); }
 .dice-tray-verdict { font-weight: 700; margin-left: 8px; }
 .dice-tray-bd { font-size: 12.5px; color: var(--ink-dim); margin-top: 2px; word-break: break-word; }
 
 .dice-tray-log { border-left: 1px solid var(--line); padding: 8px 12px; max-height: 156px; overflow: auto; }
-.dice-tray-log-head { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-faint); margin-bottom: 5px; position: sticky; top: 0; background: transparent; }
+.dice-tray-log-head { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-faint); margin-bottom: 5px; position: sticky; top: 0; background: transparent; font-weight: 700; }
 .dice-log-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; padding: 3px 0; border-bottom: 1px solid var(--line-soft); }
 .dice-log-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dice-log-total { font-variant-numeric: tabular-nums; color: var(--gold-bright); white-space: nowrap; }
+.dice-log-total { font-variant-numeric: tabular-nums; color: var(--heading); font-weight: 700; white-space: nowrap; }
 .dice-log-verdict { font-size: 10px; color: var(--ink-faint); margin-left: 4px; }
 
 .dice-tray-quick { display: flex; gap: 6px; padding: 0 16px 12px; flex-wrap: wrap; align-items: center; max-width: 1152px; margin: 0 auto; }
 .dice-quick-btn { min-height: 30px !important; padding: 3px 10px !important; font-size: 12px !important; border-radius: 7px !important; }
 .dice-quick-input { width: 90px !important; min-height: 30px !important; padding: 4px 8px !important; font-size: 13px !important; }
 
-/* Individual dice */
+/* Individual dice — carved ivory with gold edges */
 .die {
   width: 46px; height: 46px; display: flex; align-items: center; justify-content: center;
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-weight: 800; font-size: 17px; color: #241a06; position: relative;
-  background: radial-gradient(circle at 40% 30%, #f4dd8a, #c9a227 70%, #a07d12);
-  border: 1px solid #8a6d14; filter: drop-shadow(0 3px 5px rgba(0,0,0,.5));
+  font-weight: 800; font-size: 17px; color: #431409; position: relative;
+  background: radial-gradient(circle at 40% 30%, #fdf3d7, #e3c98d 65%, #b28d4e);
+  border: 1px solid #97783c; filter: drop-shadow(0 3px 5px rgba(88, 52, 10, .35));
 }
 .die-s6 { border-radius: 9px; }
-.die-crit { background: radial-gradient(circle at 40% 30%, #bff0c8, #4f9d62 70%, #2f6b40); color: #08240f; box-shadow: 0 0 14px rgba(79,157,98,.6); }
-.die-fumble { background: radial-gradient(circle at 40% 30%, #f0b9b9, #c23636 70%, #7d1e1e); color: #2a0808; box-shadow: 0 0 12px rgba(194,54,54,.5); }
+.die-crit { background: radial-gradient(circle at 40% 30%, #d8f0dc, #71b183 65%, #3f7a52); color: #0b2e17; box-shadow: 0 0 14px rgba(79, 157, 98, .55); }
+.die-fumble { background: radial-gradient(circle at 40% 30%, #f5cfc7, #cd5140 65%, #8a2018); color: #3a0d06; box-shadow: 0 0 12px rgba(194, 54, 54, .45); }
 @keyframes die-tumble {
   0% { transform: rotate(0) translateY(0) scale(.9); }
   20% { transform: rotate(160deg) translateY(-12px) scale(1.05); }

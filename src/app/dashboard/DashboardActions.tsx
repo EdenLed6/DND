@@ -65,7 +65,7 @@ export function DashboardActions() {
                 <input className="input mb-3" value={name} onChange={(e) => setName(e.target.value)} />
                 <label className="label">Description (optional)</label>
                 <textarea className="input mb-3" value={description} onChange={(e) => setDescription(e.target.value)} />
-                {error && <p className="mb-2 text-sm text-red-400">{error}</p>}
+                {error && <p className="mb-2 text-sm text-red-700">{error}</p>}
                 <div className="flex justify-end gap-2">
                   <button className="btn-ghost" onClick={() => setModal(null)}>Cancel</button>
                   <button className="btn-primary" disabled={busy || !name} onClick={createCampaign}>Create</button>
@@ -76,7 +76,7 @@ export function DashboardActions() {
                 <h3 className="mb-3 font-display text-lg text-gold">Join Campaign</h3>
                 <label className="label">Invite Code</label>
                 <input className="input mb-3" value={code} onChange={(e) => setCode(e.target.value)} placeholder="ABCD12" />
-                {error && <p className="mb-2 text-sm text-red-400">{error}</p>}
+                {error && <p className="mb-2 text-sm text-red-700">{error}</p>}
                 <div className="flex justify-end gap-2">
                   <button className="btn-ghost" onClick={() => setModal(null)}>Cancel</button>
                   <button className="btn-primary" disabled={busy || !code} onClick={joinCampaign}>Join</button>
