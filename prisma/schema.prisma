@@ -65,12 +65,170 @@ model Campaign {
   inviteCode  String   @unique
   createdAt   DateTime @default(now())
 
+  settingsJson String @default("{}") // rule toggles: crit rules, enemy HP visibility, dice visibility, rest rules...
+
   members    CampaignMember[]
   characters Character[]
   encounters Encounter[]
   maps       GameMap[]
   loot       LootItem[]
   notes      CampaignNote[]
+  sessions   GameSession[]
+  npcs       Npc[]
+  quests     Quest[]
+  dmNotes    DmNote[]
+  partyItems PartyItem[]
+  auditLogs  AuditLog[]
+  homebrewMonsters HomebrewMonster[]
+}
+
+// ============================================================
+// World layer (SPEC-DM §5, §10, §11, §14) + conditions & audit
+// ============================================================
+
+// Applied condition / ongoing effect (docs/design-system/CONDITIONS-COMPONENT.he.md).
+// Target is a combatant (in an encounter) or a character (out of combat).
+model AppliedCondition {
+  id              String    @id @default(cuid())
+  encounterId     String?
+  combatantId     String?
+  characterId     String?
+  name            String
+  icon            String?
+  category        String    @default("condition") // condition|dot|buff|debuff|injury|exhaustion|custom
+  severity        String?
+  sourceText      String?
+  durationRounds  Int?
+  remainingRounds Int?
+  saveAbility     String?   // str|dex|con|int|wis|cha
+  saveDc          Int?
+  stacks          Int       @default(1)
+  visibility      String    @default("public") // public | dm
+  automationJson  String    @default("{}") // {startTurnDamage:"1d6", damageType:"fire", endTurnSave:true, autoExpire:"end-of-turn"}
+  notes           String?
+  createdAt       DateTime  @default(now())
+
+  @@index([encounterId])
+  @@index([combatantId])
+  @@index([characterId])
+}
+
+model HomebrewMonster {
+  id            String    @id @default(cuid())
+  ownerId       String
+  campaignId    String?
+  name          String
+  statBlockJson String    // same shape the combat engine reads for SRD monsters
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  campaign      Campaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+  @@index([campaignId])
+}
+
+model GameSession {
+  id          String    @id @default(cuid())
+  campaignId  String
+  number      Int
+  title       String    @default("")
+  date        DateTime?
+  status      String    @default("PLANNED") // PLANNED | LIVE | DONE
+  agendaJson  String    @default("[]") // [{title, done, notes}]
+  prepNotes   String?
+  recapPlayer String?   // player-visible recap
+  recapDm     String?   // DM-only recap
+  xpAwarded   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  campaign    Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+}
+
+model Npc {
+  id            String   @id @default(cuid())
+  campaignId    String
+  name          String
+  role          String?
+  location      String?
+  faction       String?
+  attitude      String?  // friendly | neutral | hostile | unknown
+  portraitUrl   String?
+  publicDesc    String?  // players may see this when revealed
+  secretDesc    String?  // DM only, never serialized to players
+  statBlockJson String?
+  status        String   @default("alive")
+  revealed      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  campaign      Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+}
+
+model Quest {
+  id         String   @id @default(cuid())
+  campaignId String
+  name       String
+  status     String   @default("ACTIVE") // ACTIVE | DONE | FAILED | HIDDEN
+  giver      String?
+  objective  String?
+  stepsJson  String   @default("[]") // [{text, done}]
+  rewards    String?
+  playerText String?  // player-visible description
+  dmNotes    String?  // DM only
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+}
+
+// DM notes & secrets (SPEC-DM §14) — visibility-controlled campaign notes.
+model DmNote {
+  id         String   @id @default(cuid())
+  campaignId String
+  title      String   @default("")
+  body       String   @default("")
+  category   String   @default("Campaign") // Campaign|Session|NPC|Location|Quest|Encounter|Character|Secret|Handout
+  visibility String   @default("dm") // dm | players (revealed)
+  pinned     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+}
+
+// Shared party inventory (SPEC-DM §11).
+model PartyItem {
+  id             String   @id @default(cuid())
+  campaignId     String
+  name           String
+  quantity       Int      @default(1)
+  notes          String?
+  srcEquipmentId String?
+  srcMagicItemId String?
+  claimedById    String?  // characterId that claimed it
+  hidden         Boolean  @default(false) // DM-only until revealed
+  createdAt      DateTime @default(now())
+  campaign       Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+}
+
+// Audit log for DM actions (SPEC v2.2 §6).
+model AuditLog {
+  id         String   @id @default(cuid())
+  campaignId String
+  userId     String
+  action     String
+  detail     String?
+  ts         DateTime @default(now())
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, ts])
 }
 
 model CampaignMember {
