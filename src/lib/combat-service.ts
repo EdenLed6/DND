@@ -7,7 +7,7 @@ import { abilityMod, sizeToSquares } from "@/lib/dnd/rules";
 import { parseActions, resolveAttackRoll, resolveSaveAttack, applyDamage, type DamageModifier } from "@/lib/dnd/combat";
 
 export async function encounterState(encounterId: string) {
-  return prisma.encounter.findUnique({
+  const enc = await prisma.encounter.findUnique({
     where: { id: encounterId },
     include: {
       combatants: { orderBy: [{ initiative: "desc" }, { sortOrder: "asc" }], include: { token: true } },
@@ -16,6 +16,22 @@ export async function encounterState(encounterId: string) {
       log: { orderBy: { ts: "desc" }, take: 40 },
     },
   });
+  if (!enc) return enc;
+  // Attach applied conditions (Conditions & Ongoing Effects system) per combatant.
+  const conds = await prisma.appliedCondition.findMany({
+    where: { encounterId }, orderBy: { createdAt: "asc" },
+  });
+  const byCombatant = new Map<string, typeof conds>();
+  for (const ac of conds) {
+    if (!ac.combatantId) continue;
+    const arr = byCombatant.get(ac.combatantId) ?? [];
+    arr.push(ac);
+    byCombatant.set(ac.combatantId, arr);
+  }
+  return {
+    ...enc,
+    combatants: enc.combatants.map((c) => ({ ...c, appliedConditions: byCombatant.get(c.id) ?? [] })),
+  };
 }
 
 /**
@@ -31,9 +47,20 @@ export function filterStateForRole<T extends { combatants: any[]; tokens: any[] 
   const hiddenIds = new Set(state.combatants.filter((c: any) => !c.isVisible).map((c: any) => c.id));
   state.combatants = state.combatants
     .filter((c: any) => c.isVisible)
-    .map((c: any) => ({ ...c, statBlockJson: null }));
+    .map((c: any) => ({
+      ...c,
+      statBlockJson: null,
+      // Players only see public conditions (DM-only ones are stripped; conditions
+      // on hidden combatants disappear with the combatant filter above).
+      appliedConditions: (c.appliedConditions ?? []).filter((ac: any) => ac.visibility === "public"),
+    }));
   state.tokens = state.tokens.filter((t: any) => !t.combatantId || !hiddenIds.has(t.combatantId));
   return state;
+}
+
+/** Append a combat-log entry and broadcast it (also used by the conditions API). */
+export async function logEvent(encounterId: string, actor: string, message: string, detail?: any) {
+  return log(encounterId, actor, message, detail);
 }
 
 async function log(encounterId: string, actor: string, message: string, detail?: any) {
@@ -139,7 +166,12 @@ export async function turn(encounterId: string, dir: "next" | "prev" | "end") {
   if (idx >= count) { idx = 0; round++; }
   if (idx < 0) { idx = count - 1; round = Math.max(1, round - 1); }
   await prisma.encounter.update({ where: { id: encounterId }, data: { turnIndex: idx, round } });
-  emitToEncounter(encounterId, "turn:advanced", { turnIndex: idx, round });
+  // Include the id of the combatant whose turn now starts, so clients (e.g. the
+  // DM's condition-tick prompts) know the new active combatant without a refetch.
+  const ordered = await prisma.combatant.findMany({
+    where: { encounterId }, orderBy: [{ initiative: "desc" }, { sortOrder: "asc" }], select: { id: true },
+  });
+  emitToEncounter(encounterId, "turn:advanced", { turnIndex: idx, round, activeCombatantId: ordered[idx]?.id ?? null });
 }
 
 export async function updateCombatant(encounterId: string, combatantId: string, patch: any) {

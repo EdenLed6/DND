@@ -3,8 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DndContext, useDraggable, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { restrictToParentElement } from "@dnd-kit/modifiers";
 import { useRealtime, useWatchEncounter } from "@/lib/realtime/useRealtime";
-
-const CONDITIONS = ["Prone","Poisoned","Restrained","Stunned","Grappled","Frightened","Blinded","Paralyzed","Unconscious"];
+import { CONDITION_PRESETS, parseAutomation } from "@/lib/dnd/conditions";
+import { roll } from "@/lib/dnd/dice";
 
 export function PlayScreen({ encId, campaignId, initialState, campaignChars, maps, isDM, myCharacterIds }: {
   encId: string; campaignId: string; initialState: any; campaignChars: any[]; maps: any[];
@@ -12,6 +12,9 @@ export function PlayScreen({ encId, campaignId, initialState, campaignChars, map
 }) {
   const [state, setState] = useState(initialState);
   const [tab, setTab] = useState<"build" | "attack">("build");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [applyFor, setApplyFor] = useState<string | null>(null); // combatantId for the Add Condition modal
+  const [prompts, setPrompts] = useState<any[]>([]); // pending turn-automation prompts (DM)
 
   useWatchEncounter(encId);
 
@@ -38,8 +41,56 @@ export function PlayScreen({ encId, campaignId, initialState, campaignChars, map
     return r.ok ? r.json() : null;
   }
 
+  /** POST to the conditions endpoint, then refetch state. */
+  async function condOp(body: any) {
+    const r = await fetch(`/api/encounters/${encId}/conditions`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    });
+    const data = r.ok ? await r.json() : null;
+    await refetch();
+    return data;
+  }
+
   const combatants: any[] = state?.combatants ?? [];
   const activeId = state?.status === "ACTIVE" ? combatants[state.turnIndex]?.id : null;
+  const selected = combatants.find((c) => c.id === selectedId) ?? null;
+
+  /** DM: advance the turn, then tick conditions for the combatant whose turn
+   *  ended (phase "end") and the one whose turn starts (phase "start"). The
+   *  server returns damage/save prompts for the DM to confirm. */
+  async function nextTurn() {
+    const endingId = combatants[state?.turnIndex]?.id ?? null;
+    const startingId = combatants.length ? combatants[(state.turnIndex + 1) % combatants.length]?.id ?? null : null;
+    await op({ op: "turn", dir: "next" });
+    const collected: any[] = [];
+    for (const [cid, phase] of [[endingId, "end"], [startingId, "start"]] as const) {
+      if (!cid) continue;
+      const d = await condOp({ op: "tick", combatantId: cid, phase });
+      if (d?.prompts?.length) collected.push(...d.prompts);
+    }
+    if (collected.length) {
+      setPrompts((list) => [
+        ...list,
+        ...collected.filter((p) => !list.some((x) => x.conditionId === p.conditionId && x.kind === p.kind)),
+      ]);
+    }
+  }
+
+  function dropPrompt(p: any) { setPrompts((list) => list.filter((x) => x !== p)); }
+
+  async function resolveDamagePrompt(p: any) {
+    const res = roll(p.expr); // DM confirms; we roll client-side via the shared dice engine
+    await condOp({
+      op: "damage", combatantId: p.targetId, amount: res.total,
+      label: `${p.name}${p.damageType ? ` (${p.damageType})` : ""}`, breakdown: res.breakdown,
+    });
+    dropPrompt(p);
+  }
+
+  async function resolveSavePrompt(p: any, passed: boolean) {
+    await condOp({ op: "saveResult", conditionId: p.conditionId, passed });
+    dropPrompt(p);
+  }
 
   return (
     <main className="mx-auto max-w-7xl space-y-3 p-3">
@@ -55,7 +106,7 @@ export function PlayScreen({ encId, campaignId, initialState, campaignChars, map
             {state?.status !== "ACTIVE" && <button className="btn-primary" onClick={() => op({ op: "rollInitiative" })}>🎲 Roll Initiative & Start</button>}
             {state?.status === "ACTIVE" && <>
               <button className="btn-ghost" onClick={() => op({ op: "turn", dir: "prev" })}>◀ Previous</button>
-              <button className="btn-gold" onClick={() => op({ op: "turn", dir: "next" })}>Next Turn ▶</button>
+              <button className="btn-gold" onClick={nextTurn}>Next Turn ▶</button>
               <button className="btn-ghost" onClick={() => op({ op: "turn", dir: "end" })}>End Combat</button>
             </>}
           </div>
@@ -75,10 +126,33 @@ export function PlayScreen({ encId, campaignId, initialState, campaignChars, map
 
         {/* SIDEBAR */}
         <div className="space-y-3">
-          <InitiativeTracker combatants={combatants} activeId={activeId} isDM={isDM} onUpdate={op} />
+          <InitiativeTracker combatants={combatants} activeId={activeId} isDM={isDM} onUpdate={op}
+            selectedId={selectedId} onSelect={(id: string) => setSelectedId(id === selectedId ? null : id)}
+            onAddCondition={isDM ? (id: string) => setApplyFor(id) : undefined}
+            onRemoveCondition={isDM ? (condId: string) => condOp({ op: "remove", conditionId: condId }) : undefined} />
+          {selected && (
+            <SelectedCombatantPanel combatant={selected} isDM={isDM}
+              onClose={() => setSelectedId(null)}
+              onAddCondition={isDM ? () => setApplyFor(selected.id) : undefined}
+              onRemoveCondition={isDM ? (condId: string) => condOp({ op: "remove", conditionId: condId }) : undefined} />
+          )}
+          {isDM && prompts.length > 0 && (
+            <PromptQueue prompts={prompts} onDamage={resolveDamagePrompt} onSave={resolveSavePrompt} onSkip={dropPrompt} />
+          )}
           <CombatLog log={state?.log ?? []} />
         </div>
       </div>
+
+      {applyFor && (() => {
+        const target = combatants.find((c) => c.id === applyFor);
+        return target ? (
+          <ApplyConditionModal combatant={target} onClose={() => setApplyFor(null)}
+            onApply={async (fields: any) => {
+              await condOp({ op: "apply", combatantId: applyFor, ...fields });
+              setApplyFor(null);
+            }} />
+        ) : null;
+      })()}
 
       {isDM && (
         <div className="card">
@@ -373,16 +447,18 @@ function MapLibraryModal({ onPick, onClose }: { onPick: (id: string) => void; on
 }
 
 /* ---------------- Initiative ---------------- */
-function InitiativeTracker({ combatants, activeId, isDM, onUpdate }: any) {
+function InitiativeTracker({ combatants, activeId, isDM, onUpdate, selectedId, onSelect, onAddCondition, onRemoveCondition }: any) {
   return (
     <div className="card">
       <h3 className="mb-2 font-display text-gold">Initiative Order</h3>
       <div className="space-y-1">
         {combatants.map((c: any) => {
-          const conditions = safeArr(c.conditions);
+          const conds: any[] = c.appliedConditions ?? [];
           const active = c.id === activeId;
+          const isSel = c.id === selectedId;
           return (
-            <div key={c.id} className={`rounded border p-2 text-sm ${active ? "border-gold bg-[#dfd5b8]" : "border-[#dfd5b8]"} ${!c.isVisible ? "opacity-60" : ""}`}>
+            <div key={c.id} onClick={() => onSelect?.(c.id)}
+              className={`cursor-pointer rounded border p-2 text-sm ${active ? "border-gold bg-[#dfd5b8]" : isSel ? "border-[#a38c62] bg-[#f0e8d2]" : "border-[#dfd5b8]"} ${!c.isVisible ? "opacity-60" : ""}`}>
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1">
                   <b className="w-6 text-center text-gold">{c.initiative}</b>
@@ -391,20 +467,18 @@ function InitiativeTracker({ combatants, activeId, isDM, onUpdate }: any) {
                 </span>
                 <span className={c.currentHp === 0 ? "text-red-700" : ""}>{c.currentHp}/{c.maxHp}</span>
               </div>
-              {conditions.length > 0 && <div className="mt-1 text-xs text-[#b98338]">{conditions.join(", ")}</div>}
+              {conds.length > 0 && (
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {conds.map((ac) => <ConditionToken key={ac.id} c={ac} isDM={isDM} compact onRemove={onRemoveCondition} />)}
+                </div>
+              )}
               {isDM && (
-                <div className="mt-1 flex flex-wrap items-center gap-1 text-xs">
+                <div className="mt-1 flex flex-wrap items-center gap-1 text-xs" onClick={(e) => e.stopPropagation()}>
                   <button className="btn-ghost !px-1.5 !py-0" onClick={() => onUpdate({ op: "updateCombatant", combatantId: c.id, patch: { currentHp: Math.max(0, c.currentHp - 5) } })}>−5</button>
                   <button className="btn-ghost !px-1.5 !py-0" onClick={() => onUpdate({ op: "updateCombatant", combatantId: c.id, patch: { currentHp: Math.min(c.maxHp, c.currentHp + 5) } })}>+5</button>
                   <button className="btn-ghost !px-1.5 !py-0" onClick={() => onUpdate({ op: "updateCombatant", combatantId: c.id, patch: { isVisible: !c.isVisible } })}>{c.isVisible ? "Hide" : "Reveal"}</button>
                   {c.token && <button className="btn-ghost !px-1.5 !py-0" title="Set token image" onClick={() => { const url = window.prompt("Token image URL (blank to clear):", c.token.imageUrl ?? ""); if (url !== null) onUpdate({ op: "updateToken", tokenId: c.token.id, patch: { imageUrl: url || null } }); }}>🖼</button>}
-                  <select className="input !w-auto !py-0 text-xs" defaultValue="" onChange={(e) => { if (!e.target.value) return;
-                    const has = conditions.includes(e.target.value);
-                    const next = has ? conditions.filter((x: string) => x !== e.target.value) : [...conditions, e.target.value];
-                    onUpdate({ op: "updateCombatant", combatantId: c.id, patch: { conditions: next } }); e.target.value = ""; }}>
-                    <option value="">±Condition</option>
-                    {CONDITIONS.map((cond) => <option key={cond}>{cond}</option>)}
-                  </select>
+                  {onAddCondition && <button className="btn-ghost !px-1.5 !py-0" title="Add condition" onClick={() => onAddCondition(c.id)}>＋ Cond</button>}
                   <button className="btn-ghost !px-1.5 !py-0" onClick={() => onUpdate({ op: "removeCombatant", combatantId: c.id })}>🗑</button>
                 </div>
               )}
@@ -412,6 +486,222 @@ function InitiativeTracker({ combatants, activeId, isDM, onUpdate }: any) {
           );
         })}
         {combatants.length === 0 && <p className="text-sm text-[#5e5448]">No combatants. Add some in Build Encounter.</p>}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Conditions & Ongoing Effects ---------------- */
+// Category → token style per the DS: condition=default, dot=danger,
+// buff=sage, magic=arcane, exhaustion/debuff=warning.
+const COND_CAT_CLASS: Record<string, string> = {
+  condition: "", dot: "cond-tok-danger", buff: "cond-tok-sage", debuff: "cond-tok-warning",
+  injury: "cond-tok-danger", exhaustion: "cond-tok-warning", magic: "cond-tok-arcane", custom: "",
+};
+
+function condMeta(c: any): string {
+  const auto = parseAutomation(c.automationJson);
+  const bits: string[] = [];
+  if (c.sourceText) bits.push(c.sourceText);
+  if (auto.startTurnDamage) bits.push(`${auto.startTurnDamage}${auto.damageType ? ` ${auto.damageType}` : ""} · Start turn`);
+  if (c.saveAbility && c.saveDc != null) bits.push(`${String(c.saveAbility).toUpperCase()} ${c.saveDc} · End turn`);
+  if (c.category === "exhaustion") bits.push(`Level ${c.stacks}`);
+  if (c.remainingRounds != null) bits.push(`${c.remainingRounds} round${c.remainingRounds === 1 ? "" : "s"}`);
+  else if (bits.length === 0) bits.push("Until removed");
+  return bits.join(" · ");
+}
+
+function ConditionToken({ c, isDM, compact, onRemove }: { c: any; isDM: boolean; compact?: boolean; onRemove?: (id: string) => void }) {
+  const cls = COND_CAT_CLASS[c.category] ?? "";
+  const isExh = c.category === "exhaustion";
+  if (compact) {
+    return (
+      <span className={`condition-token cond-tok-compact ${cls}`} title={`${c.name} — ${condMeta(c)}`} onClick={(e) => e.stopPropagation()}>
+        <span className="ct-icon">{c.icon || "✱"}</span>
+        <strong>{c.name}{!isExh && c.stacks > 1 ? ` ×${c.stacks}` : ""}</strong>
+        {isExh && <ExhaustionPips level={c.stacks} />}
+        {isDM && c.visibility === "dm" && <em className="ct-dm">DM</em>}
+        {isDM && onRemove && <button className="ct-x" title="Remove condition" onClick={() => onRemove(c.id)}>✕</button>}
+      </span>
+    );
+  }
+  return (
+    <div className={`condition-token ${cls}`} onClick={(e) => e.stopPropagation()}>
+      <span className="ct-icon">{c.icon || "✱"}</span>
+      <span className="ct-body">
+        <strong>
+          {c.name}{!isExh && c.stacks > 1 ? ` ×${c.stacks}` : ""}
+          {c.severity && <em className="ct-sev">{c.severity}</em>}
+          {isDM && c.visibility === "dm" && <em className="ct-dm">DM only</em>}
+        </strong>
+        <small>{condMeta(c)}</small>
+        {isExh && <ExhaustionPips level={c.stacks} />}
+      </span>
+      {isDM && onRemove && <button className="ct-x" title="Remove condition" onClick={() => onRemove(c.id)}>✕</button>}
+    </div>
+  );
+}
+
+function ExhaustionPips({ level }: { level: number }) {
+  return (
+    <span className="exh-pips" title={`Exhaustion level ${level} of 6`}>
+      {Array.from({ length: 6 }).map((_, i) => <i key={i} className={`exh-pip ${i < level ? "filled" : ""}`} />)}
+    </span>
+  );
+}
+
+function SelectedCombatantPanel({ combatant, isDM, onClose, onAddCondition, onRemoveCondition }: any) {
+  const conds: any[] = combatant.appliedConditions ?? [];
+  return (
+    <div className="card">
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="font-display text-gold">{combatant.name}</h3>
+        <button className="btn-ghost !px-1.5 !py-0 text-xs" onClick={onClose}>✕</button>
+      </div>
+      <div className="mb-2 flex gap-2 text-xs text-[#5e5448]">
+        <span className="chip">HP {combatant.currentHp}/{combatant.maxHp}</span>
+        <span className="chip">AC {combatant.ac}</span>
+        <span className="chip">Init {combatant.initiative}</span>
+      </div>
+      <div className="text-xs uppercase tracking-wide text-[#857866]">Conditions</div>
+      <div className="mt-1 flex flex-wrap gap-1.5">
+        {conds.map((ac) => <ConditionToken key={ac.id} c={ac} isDM={isDM} onRemove={onRemoveCondition} />)}
+        {conds.length === 0 && <span className="text-sm text-[#5e5448]">No active conditions.</span>}
+      </div>
+      {onAddCondition && (
+        <button className="btn-ghost mt-2 !py-1 text-sm" onClick={onAddCondition}>+ Add Condition</button>
+      )}
+    </div>
+  );
+}
+
+/* Turn-automation prompt queue (DM): DoT damage + end-of-turn saves. */
+function PromptQueue({ prompts, onDamage, onSave, onSkip }: any) {
+  return (
+    <div className="card border-l-4 !border-l-[#b98338]">
+      <h3 className="mb-2 font-display text-gold">Turn Effects</h3>
+      <div className="space-y-2 text-sm">
+        {prompts.map((p: any, i: number) => (
+          <div key={`${p.kind}-${p.conditionId}-${i}`} className="rounded border border-[#dfd5b8] p-2">
+            {p.kind === "damage" ? (
+              <>
+                <div>{p.icon} <b>{p.name}</b>: roll {p.expr}{p.damageType ? ` ${p.damageType}` : ""} damage to <b>{p.targetName}</b></div>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  <button className="btn-gold !py-0.5 text-xs" onClick={() => onDamage(p)}>🎲 Roll & Apply</button>
+                  <button className="btn-ghost !py-0.5 text-xs" onClick={() => onSkip(p)}>Skip</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>{p.icon} <b>{String(p.ability).toUpperCase()} {p.dc}</b> save vs <b>{p.name}</b> — {p.targetName}</div>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  <button className="btn-gold !py-0.5 text-xs" onClick={() => onSave(p, true)}>Passed → Remove</button>
+                  <button className="btn-ghost !py-0.5 text-xs" onClick={() => onSave(p, false)}>Failed → Keep</button>
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* Apply Condition modal (DM) — preset pills + duration/save/stacks/visibility/source. */
+function ApplyConditionModal({ combatant, onClose, onApply }: any) {
+  const [picked, setPicked] = useState<string>("");
+  const [customName, setCustomName] = useState("");
+  const [duration, setDuration] = useState(0); // 0 = until removed
+  const [saveAbility, setSaveAbility] = useState("");
+  const [saveDc, setSaveDc] = useState(13);
+  const [stacks, setStacks] = useState(1);
+  const [visibility, setVisibility] = useState<"public" | "dm">("public");
+  const [source, setSource] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const preset = CONDITION_PRESETS.find((p) => p.name === picked);
+  const name = picked === "__custom" ? customName.trim() : picked;
+  const maxStacks = preset?.maxStacks ?? 20;
+
+  async function apply() {
+    if (!name || busy) return;
+    setBusy(true);
+    const fields: any = { name, stacks: Math.min(stacks, maxStacks), visibility, durationRounds: duration };
+    if (picked === "__custom") fields.category = "custom";
+    if (saveAbility) { fields.saveAbility = saveAbility; fields.saveDc = saveDc; }
+    if (source.trim()) fields.sourceText = source.trim();
+    await onApply(fields);
+    setBusy(false);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <div className="card max-h-[85vh] w-full max-w-2xl overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="font-display text-lg text-gold">Apply Condition — {combatant.name}</h3>
+          <button className="btn-ghost !py-0.5" onClick={onClose}>Close</button>
+        </div>
+
+        <div className="condition-pill-grid">
+          {CONDITION_PRESETS.map((p) => (
+            <button key={p.name} className={`condition-pill ${picked === p.name ? `is-active ${COND_CAT_CLASS[p.category] ?? ""}` : ""}`}
+              onClick={() => { setPicked(p.name); if (p.supportsStacks && stacks > (p.maxStacks ?? 20)) setStacks(p.maxStacks ?? 20); }}>
+              <span>{p.icon}</span><strong>{p.name}</strong><small>{p.summary}</small>
+            </button>
+          ))}
+          <button className={`condition-pill ${picked === "__custom" ? "is-active" : ""}`} onClick={() => setPicked("__custom")}>
+            <span>✎</span><strong>Custom…</strong><small>Campaign-specific effect</small>
+          </button>
+        </div>
+
+        {picked === "__custom" && (
+          <div className="mt-2">
+            <label className="label">Condition name</label>
+            <input className="input" placeholder="e.g. Cursed by the Lich" maxLength={60} value={customName} onChange={(e) => setCustomName(e.target.value)} />
+          </div>
+        )}
+
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div>
+            <label className="label">Duration</label>
+            <select className="input" value={duration} onChange={(e) => setDuration(+e.target.value)}>
+              <option value={0}>Until removed</option>
+              <option value={1}>1 round</option>
+              <option value={3}>3 rounds</option>
+              <option value={10}>10 rounds</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">Save (end of turn)</label>
+            <div className="flex gap-1">
+              <select className="input" value={saveAbility} onChange={(e) => setSaveAbility(e.target.value)}>
+                <option value="">No save</option>
+                {["str", "dex", "con", "int", "wis", "cha"].map((a) => <option key={a} value={a}>{a.toUpperCase()}</option>)}
+              </select>
+              {saveAbility && <input className="input !w-20" type="number" min={1} max={30} value={saveDc} onChange={(e) => setSaveDc(+e.target.value)} title="DC" />}
+            </div>
+          </div>
+          <div>
+            <label className="label">{preset?.category === "exhaustion" ? "Level (1–6)" : "Stacks"}</label>
+            <input className="input" type="number" min={1} max={maxStacks} value={stacks} onChange={(e) => setStacks(Math.max(1, Math.min(maxStacks, +e.target.value || 1)))} />
+          </div>
+          <div>
+            <label className="label">Visibility</label>
+            <select className="input" value={visibility} onChange={(e) => setVisibility(e.target.value as any)}>
+              <option value="public">Public</option>
+              <option value="dm">DM only</option>
+            </select>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="label">Source (optional)</label>
+            <input className="input" placeholder="e.g. Crawler Venom" maxLength={120} value={source} onChange={(e) => setSource(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="mt-3 flex justify-end gap-2">
+          <button className="btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" disabled={!name || busy} onClick={apply}>{busy ? "Applying…" : "Apply Condition"}</button>
+        </div>
       </div>
     </div>
   );
@@ -547,7 +837,6 @@ function AttackPanel({ op, combatants }: any) {
   );
 }
 
-function safeArr(s: any): string[] { try { return typeof s === "string" ? JSON.parse(s) : (s ?? []); } catch { return []; } }
 function parseStatActions(statBlockJson: string | null) {
   try {
     const sb = JSON.parse(statBlockJson || "{}");
