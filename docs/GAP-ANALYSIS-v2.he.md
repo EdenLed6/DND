@@ -1,0 +1,97 @@
+# ניתוח פערים — מהמצב הקיים לאפיון v2
+
+> יולי 2026 · משווה את מה שממומש היום (לפי `SPEC.he.md` v1) מול האפיון החדש (`SPEC-v2.he.md`, `SPEC-PLAYER.he.md`, `SPEC-DM.he.md`), ומגדיר תוכנית מימוש בשלבים.
+
+---
+
+## 1. מה כבר קיים ותואם את v2
+
+התשתית והלוגיקה — רוב "המוח" של v2 כבר בנוי:
+
+- **חשבונות ואבטחה:** אימייל+סיסמה, Google, אימות אימייל, איפוס סיסמה, סשנים מאובטחים, RBAC בשרת, הגבלת קצב, ולידציה.
+- **מנוע חוקים:** מודיפיירים, PB, הצלות, כישורים, AC, יוזמה, מהירות, פסיביים, Spell Attack/DC, חריצים בריבוי-מקצועות + Pact, משאבי מקצוע, עומס, הצלות מוות, ריכוז, מנוחות, זכאות עליית דרגה — כל רשימת "החוקים המחושבים" של v2 §3.3 קיימת ומכוסה בבדיקות.
+- **גיליון דמות עשיר:** גלגול מכל ערך, הטלת לחשים עם שדרוג וצריכת חריץ, מוני משאבים, מנוחות וקוביות פגיעה, מלאי עם equip/attune ומשקל, פיצ'רים לפי דרגה, אשף יצירת דמות ואשף עליית דרגה, ייבוא/ייצוא JSON.
+- **קמפיין:** חבורה חיה, XP, זהב, מנוחות קבוצתיות, קוד הזמנה.
+- **קרב חי:** מפה+רשת, אסימונים נגררים עם הרשאות, יוזמה, זרימת התקפה מלאה, ערפל מלחמה **מסונן בשרת**, לוחמים מוסתרים לא משודרים, סרגל, AoE, ~50 מפות + העלאה.
+- **קומפנדיום SRD מלא**, PWA, Realtime rooms (כולל ערוץ DM נפרד).
+
+**המשמעות:** v2 הוא בעיקר שכבת מוצר וממשק חדשה מעל מנוע קיים ותקין — לא כתיבה מחדש.
+
+---
+
+## 2. פערים מרכזיים מול v2
+
+### 2.1 שפה עיצובית (v2 §4) — היפוך כיוון
+
+| v2 דורש | קיים היום |
+|---|---|
+| Dark Fantasy Product UI: בסיס כמעט שחור `#0B1115`, משטחי slate, crimson `#D20A16`, arcane blue `#2299E8`, Inter/system UI, Cinzel רק בכותרות נבחרות | עיצוב "ספר קלף" בהיר (פרלמנט, קרם, maroon/זהב) |
+
+כל הצבעים היום מרוכזים בטוקנים ב-`globals.css` + Tailwind — ההחלפה זולה יחסית. נדרש מיפוי טוקנים חדש + מעבר על ~24 קבצים עם ערכים קשיחים (כבר ממופים מהמעבר הקודם).
+
+### 2.2 מבנה המוצר (v2 §2) — שני פורטלים
+
+- אין היום **שער בחירת הקשר** (Player/DM) אחרי התחברות.
+- אין **Player Portal shell**: header דמות קבוע/sticky על כל מסכי הדמות (עם AC/HP/יוזמה/מנוחות תמיד זמינים), Section Bar עם Grid/List, Section Drawer עם 12 מדורים, Bottom Nav של 5 יעדים, כפתור קובייה צף.
+- אין **DM Portal shell**: sidebar בדסקטופ / bottom nav בנייד, DM Home Dashboard.
+- היום הגיליון הוא עמוד יחיד ארוך; v2 דורש פירוק ל**מדורים** (Abilities / Skills / Actions / Spells / Inventory / Features / Proficiencies / Background / Notes / Extras / Manage).
+
+### 2.3 מערכת קוביות תלת־ממדית (PLAYER §17+§19) — החלפה מלאה
+
+מגש הקוביות הקיים (2D) מוחלף ב:
+
+- **Overlay פיזיקלי** מעל כל המסך: Three.js + פיזיקה (cannon-es/Rapier), קוביות 3D אמיתיות d4–d100 שנזרקות, מתנגשות ונוחתות; זיהוי פאה עליונה.
+- Roll Result Cards שקופים נערמים; Dice Builder Drawer; זריקה ידנית ב-flick; Themes; צליל/רטט; fallback 2D ו-reduced-motion.
+- **פרסר נוסחאות מורחב:** kh/kl, drop, reroll, explode, success threshold.
+- **Roll feed קמפייני עם visibility:** self / DM-only / public / hidden — נאכף בשרת.
+
+### 2.4 עומק Player Portal (PLAYER §4–§16)
+
+חסרים היום: קיבוץ פעולות לפי כלכלת-פעולה (Action/Bonus/Reaction) + רשימת פעולות כלליות (Dash, Dodge…); adv/dis ובונוס מצבי לכל גלגול; Pin לכישורים; Speed & Defenses (התנגדויות/חסינויות/פגיעויות, פירוק AC); מערכת Notes (קטגוריות, שיתוף עם DM); Extras/Creatures (פמיליאר, Wild Shape, בני לוויה); Manage Character מורחב (שכפול, ארכוב, overrides, milestone mode); תחמושת ו-charges לפריטים; Party Inventory מצד השחקן.
+
+### 2.5 עומק DM Portal (SPEC-DM)
+
+חסרים היום: DM Dashboard; מערכת **Sessions** (הכנה / מצב חי / recap); Encounter Builder עם **מחשבון קושי XP**; פאנל לוחם מלא עם stat block ופעולות; **Conditions עם משך ומקור**; לוג קרב עם **Undo** והסתרה; כלי מפה מתקדמים (ציור, ping, קירות/דלתות/תאורה, יישור רשת); ספריית אויבים עם פילטרים + **בונה מפלצות הומברו**; NPCs/Locations/Quests; **Notes & Secrets** עם visibility; Loot bundles + Party Inventory + חלוקה; אישור/נעילת עליות דרגה; הגדרות קמפיין (חוקי crit, נראות HP אויבים, נראות גלגולים, אישור הצטרפות); מטריצת הרשאות; **Audit log**; Impersonate player view.
+
+### 2.6 רוחבי (v2 §6)
+
+חסרים: Undo לפעולות קריטיות, Audit log, Skeleton loading, Empty states מסודרים, Print view, Shareable summary, קיצורי מקלדת.
+
+---
+
+## 3. תוכנית מימוש בשלבים
+
+> כל שלב עומד בפני עצמו, נבדק ונדחף. הסדר נבנה כך שכל שלב נשען על קודמו.
+
+### שלב 1 — שפה עיצובית + שלדי הפורטלים *(היסוד להכל)*
+1. החלפת טוקנים ל-Dark Fantasy UI לפי v2 §4.2 (מרכזי — `globals.css` + Tailwind + מעבר קשיחים).
+2. שער בחירת הקשר Player/DM אחרי התחברות.
+3. Player Shell: header דמות קבוע (Expanded/Compact/Combat/0HP/ריכוז), Section Drawer + Section Bar (Grid/List), Bottom Nav, כפתור קובייה צף.
+4. DM Shell: sidebar דסקטופ + bottom nav נייד, DM Home בסיסי.
+5. פירוק הגיליון הקיים למדורי ה-Shell (התוכן הקיים ממופה למדורים).
+
+### שלב 2 — מערכת הקוביות התלת־ממדית
+1. Overlay פיזיקלי (Three.js + cannon-es), 7 סוגי קוביות, זיהוי פאה, fallback 2D.
+2. Dice Builder, Roll Cards, זריקה ידנית, Themes בסיסיים.
+3. פרסר נוסחאות מורחב (kh/kl/drop/reroll/explode).
+4. חיבור כל ה-rollables הקיימים ל-overlay + Roll feed קמפייני עם visibility בשרת.
+
+### שלב 3 — עומק Player Portal
+Actions economy + פעולות כלליות · adv/dis + situational לכל גלגול · Pin skills · Speed & Defenses · Notes · Extras/Creatures · Manage Character מורחב · charges/ammo.
+
+### שלב 4 — עומק DM Portal (ליבה)
+DM Dashboard · Encounter Builder + מחשבון קושי · פאנל לוחם מלא · Conditions עם משך · לוג עם Undo · ספריית אויבים + Homebrew builder · כלי מפה מתקדמים.
+
+### שלב 5 — שכבת העולם והקמפיין
+Sessions (prep/live/recap) · NPCs/Locations/Quests · Notes & Secrets · Loot & Party Inventory · הגדרות קמפיין + הרשאות + Audit log · אישור עליות דרגה.
+
+### שלב 6 — ליטוש רוחבי
+Undo/confirmation בכל פעולה קריטית · Skeletons/Empty states · Print view · Shareable summary · נגישות AA מלאה · ביצועים.
+
+---
+
+## 4. הערות יישום
+
+- **אין צורך במיגרציית DB הרסנית** לשלבים 1–2; שלבים 3–5 מוסיפים טבלאות (notes, sessions, npcs, quests, party_inventory, audit_log, creatures) בלי לשבור קיים.
+- מנוע החוקים, ה-API וה-realtime הקיימים משרתים את שני הפורטלים כמעט ללא שינוי — v2 עצמו קובע: "תומך בשחקן ובשה"מ באותה מערכת נתונים, עם ממשקים שונים לחלוטין".
+- מערכת הקוביות תיבנה כחבילה מבודדת (`src/dice3d/`) עם API יציב (`roll(expression, options) → RollResult`) כדי ששני הפורטלים יצרכו אותה זהה, כנדרש ב-v2 §8.
