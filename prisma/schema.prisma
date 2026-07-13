@@ -159,6 +159,7 @@ model Character {
   proficienciesJson String @default("{}") // {languages,tools,weapons,armor,skillChoices}
   featuresJson      String @default("[]") // feats & custom features
   spellcastingJson  String @default("{}") // {slotsUsed:{1:0,...}, pactSlotsUsed, ...}
+  defensesJson      String @default("{}") // {resistances[],immunities[],vulnerabilities[],conditionImmunities[],speeds:{fly,swim,climb,burrow}}
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -171,6 +172,24 @@ model Character {
   skills    CharacterSkill[]
   resources CharacterResource[]
   tokens    Token[]
+  playerNotes CharacterNote[]
+}
+
+// Player notes (SPEC-PLAYER §14): categorized, pinnable, optionally shared
+// with the DM. Private notes are never returned to other users.
+model CharacterNote {
+  id           String    @id @default(cuid())
+  characterId  String
+  category     String    @default("General") // General|Session|NPCs|Locations|Quests|Secrets|Rules
+  title        String    @default("")
+  body         String    @default("")
+  pinned       Boolean   @default(false)
+  sharedWithDm Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  character    Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@index([characterId])
 }
 
 model CharacterClass {
