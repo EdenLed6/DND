@@ -8,16 +8,30 @@ import { useRealtime } from "@/lib/realtime/useRealtime";
 import { InventoryManager } from "./InventoryManager";
 import { SpellManager } from "./SpellManager";
 import { LevelUpWizard } from "./LevelUpWizard";
+import { CastableSpells } from "./CastableSpells";
+import { ResourcePanel } from "./ResourcePanel";
+import { RestPanel } from "./RestPanel";
+import { SensesPanel } from "./SensesPanel";
+import { ProficienciesPanel } from "./ProficienciesPanel";
+import { DescriptionTab } from "./DescriptionTab";
+import { EncumbranceBar } from "./EncumbranceBar";
 import { rollToTray, rollAttackToTray } from "@/components/DiceTray";
-import type { EquippedWeapon } from "@/lib/character-view";
+import type { EquippedWeapon, Encumbrance, Senses, Proficiencies } from "@/lib/character-view";
+import type { DerivedResource } from "@/lib/dnd/resources";
 
 const CONDITIONS = ["Blinded","Charmed","Deafened","Frightened","Grappled","Incapacitated","Invisible","Paralyzed","Petrified","Poisoned","Prone","Restrained","Stunned","Unconscious"];
 
-export function CharacterSheet({ initialCharacter, derived, spellDetails, features, weapons, canEdit, isDM }: {
-  initialCharacter: any; derived: DerivedCharacter; spellDetails: any[]; features: any[]; weapons: EquippedWeapon[]; canEdit: boolean; isDM: boolean;
+type MergedResource = DerivedResource & { used: number };
+
+export function CharacterSheet({ initialCharacter, derived, spellDetails, features, weapons, encumbrance, resources: initialResources, senses, proficiencies, canEdit, isDM }: {
+  initialCharacter: any; derived: DerivedCharacter; spellDetails: any[]; features: any[]; weapons: EquippedWeapon[];
+  encumbrance: Encumbrance; resources: MergedResource[]; senses: Senses; proficiencies: Proficiencies;
+  canEdit: boolean; isDM: boolean;
 }) {
   const router = useRouter();
   const [c, setC] = useState(initialCharacter);
+  const [resources, setResources] = useState<MergedResource[]>(initialResources);
+  const [tab, setTab] = useState<"sheet" | "background">("sheet");
   // Play vs Edit: Play is for USING the character (rolling, HP, slots, conditions,
   // inventory usage). Edit reveals DEFINITION-editing affordances (avatar, level up,
   // add/remove spells & items). Gameplay controls stay available in Play mode.
@@ -65,6 +79,61 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
 
   const [dmg, setDmg] = useState("");
   const [showLevelUp, setShowLevelUp] = useState(false);
+
+  // ---- Spell slots (stored in spellcastingJson) ----
+  const slotsUsedMap = parseSlotsUsed(c);
+  const pactUsedCount = parsePactUsed(c);
+  function spendSlot(level: number) {
+    const cur = parseSlotsUsed(c)[level] ?? 0;
+    const max = derived.spellcasting?.slots[level - 1] ?? 0;
+    if (cur >= max) return;
+    patch({ spellcastingJson: setSlotUsed(c, level, cur + 1) });
+  }
+  function spendPact() {
+    const cur = parsePactUsed(c);
+    const max = derived.spellcasting?.pact?.slots ?? 0;
+    if (cur >= max) return;
+    patch({ spellcastingJson: setPactUsed(c, cur + 1) });
+  }
+
+  // ---- Class resources ----
+  function setResourceUsed(key: string, used: number) {
+    const r = resources.find((x) => x.key === key);
+    if (!r) return;
+    const clamped = Math.max(0, Math.min(r.max, used));
+    setResources((prev) => prev.map((x) => (x.key === key ? { ...x, used: clamped } : x)));
+    fetch(`/api/characters/${c.id}/resources`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key, used: clamped, max: r.max, resetOn: r.resetOn }),
+    }).catch(() => {});
+  }
+
+  // ---- Rest ----
+  async function doRest(type: "SHORT" | "LONG") {
+    const res = await fetch(`/api/characters/${c.id}/rest`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type }),
+    });
+    if (res.ok) {
+      const { patch: applied } = await res.json();
+      if (applied) setC((prev: any) => ({ ...prev, ...applied }));
+      // reset resource usage locally to match the server
+      setResources((prev) => prev.map((r) => (type === "LONG" || r.resetOn === "SHORT" ? { ...r, used: 0 } : r)));
+    }
+  }
+  function spendHitDie(_die: number, healed: number) {
+    const totalHd = derived.hitDiceTotal.reduce((s, h) => s + h.count, 0);
+    if (c.hitDiceUsed >= totalHd) return;
+    const hp = Math.min(derived.maxHp, c.currentHp + Math.max(0, healed));
+    patch({ hitDiceUsed: c.hitDiceUsed + 1, currentHp: hp });
+  }
+
+  function saveDescription(field: string, value: string) {
+    patch({ [field]: value || null });
+  }
+
+  const saveProfs = ABILITIES.filter((a) => derived.saves[a].proficient).map((a) => a.toUpperCase());
+  const skillProfs = Object.entries(derived.skills).filter(([, s]) => s.proficient).map(([name]) => name);
+  const totalHitDice = derived.hitDiceTotal.reduce((s, h) => s + h.count, 0);
 
   return (
     <main className="mx-auto max-w-6xl space-y-4 p-4">
@@ -123,6 +192,16 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
         />
       )}
 
+      <div className="tabbar w-fit rounded-full border border-[#3a2f24] p-0.5" role="tablist" aria-label="Sheet section">
+        <button type="button" className="tab" data-active={tab === "sheet"} aria-pressed={tab === "sheet"} onClick={() => setTab("sheet")}>Sheet</button>
+        <button type="button" className="tab" data-active={tab === "background"} aria-pressed={tab === "background"} onClick={() => setTab("background")}>Background</button>
+      </div>
+
+      {tab === "background" && (
+        <DescriptionTab character={c} canEdit={canEditDef} onSave={saveDescription} />
+      )}
+
+      {tab === "sheet" && (<>
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Left column: abilities + saves + skills */}
         <div className="space-y-4">
@@ -176,6 +255,9 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
               <span className="chip">Insight {10 + derived.skills.Insight.value}</span>
             </div>
           </div>
+
+          <SensesPanel senses={senses} />
+          <ProficienciesPanel proficiencies={proficiencies} saveProfs={saveProfs} skillProfs={skillProfs} />
         </div>
 
         {/* Middle column: combat */}
@@ -269,6 +351,19 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
             </div>
             {c.concentration && <div className="mt-2 text-sm text-arcane">🔵 Concentrating: {c.concentration}</div>}
           </div>
+
+          <RestPanel
+            hitDice={derived.hitDiceTotal}
+            hitDiceUsed={c.hitDiceUsed}
+            conMod={derived.mods.con}
+            totalHitDice={totalHitDice}
+            canUse={canUse}
+            onShortRest={() => doRest("SHORT")}
+            onLongRest={() => doRest("LONG")}
+            onSpendHitDie={spendHitDie}
+          />
+
+          <ResourcePanel resources={resources} canUse={canUse} onSetUsed={setResourceUsed} />
         </div>
 
         {/* Right column: spells + currency */}
@@ -290,6 +385,17 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
                   <div className="mt-2 text-xs text-arcane">Pact Magic: {derived.spellcasting.pact.slots} slots @ L{derived.spellcasting.pact.level}</div>
                 )}
               </div>
+              <CastableSpells
+                spells={spellDetails}
+                spellcasting={derived.spellcasting}
+                slotsUsed={slotsUsedMap}
+                pactUsed={pactUsedCount}
+                characterLevel={derived.totalLevel}
+                abilityMod={derived.mods[derived.spellcasting.ability]}
+                canUse={canUse}
+                onSpendSlot={spendSlot}
+                onSpendPact={spendPact}
+              />
               <SpellManager characterId={c.id} spells={spellDetails} casterClass={derived.spellcasting.casterClass} canEdit={canEditDef} canUse={canUse} />
             </div>
           )}
@@ -311,6 +417,10 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
           </div>
 
           <InventoryManager characterId={c.id} items={c.items} canEdit={canEditDef} canUse={canUse} carryCapacity={derived.carryCapacity} />
+          <div className="card">
+            <h3 className="mb-1 font-display text-gold">Encumbrance</h3>
+            <EncumbranceBar encumbrance={encumbrance} />
+          </div>
         </div>
       </div>
 
@@ -334,6 +444,7 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
           </div>
         )}
       </div>
+      </>)}
 
       {isDM && <div className="text-center text-xs text-[#a9977c]">👑 DM Mode — you have full control over this character</div>}
     </main>
@@ -359,6 +470,13 @@ function SlotRow({ level, total, used, canEdit, onChange }: { level: number; tot
 
 function safeArr(s: any): string[] { try { return typeof s === "string" ? JSON.parse(s) : (s ?? []); } catch { return []; } }
 function slotUsed(c: any, level: number): number { try { return (JSON.parse(c.spellcastingJson || "{}").slotsUsed ?? {})[level] ?? 0; } catch { return 0; } }
+function parseSlotsUsed(c: any): Record<number, number> { try { return JSON.parse(c.spellcastingJson || "{}").slotsUsed ?? {}; } catch { return {}; } }
+function parsePactUsed(c: any): number { try { return JSON.parse(c.spellcastingJson || "{}").pactUsed ?? 0; } catch { return 0; } }
+function setPactUsed(c: any, used: number): string {
+  let obj: any = {}; try { obj = JSON.parse(c.spellcastingJson || "{}"); } catch {}
+  obj.pactUsed = used;
+  return JSON.stringify(obj);
+}
 function setSlotUsed(c: any, level: number, used: number): string {
   let obj: any = {}; try { obj = JSON.parse(c.spellcastingJson || "{}"); } catch {}
   obj.slotsUsed = { ...(obj.slotsUsed ?? {}), [level]: used };

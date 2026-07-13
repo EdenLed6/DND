@@ -2,6 +2,30 @@ import { prisma } from "@/lib/db";
 import { derive, type CharacterInput, type CharClassInput, type ArmorInput } from "@/lib/dnd/character";
 import type { Ability } from "@/lib/dnd/rules";
 import { subclassFeaturesUpTo } from "@/lib/dnd/subclass-features";
+import { deriveResources, mergeResourceUsage, type DerivedResource } from "@/lib/dnd/resources";
+
+export interface Encumbrance {
+  totalWeight: number;
+  capacity: number;        // STR × 15
+  pushDragLift: number;    // STR × 30
+  encumberedAt: number;    // STR × 5 (variant)
+  heavyAt: number;         // STR × 10 (variant)
+  status: "normal" | "encumbered" | "heavily" | "overloaded";
+}
+
+export interface Senses {
+  darkvision: number | null;
+  passivePerception: number;
+  passiveInvestigation: number;
+  passiveInsight: number;
+}
+
+export interface Proficiencies {
+  languages: string[];
+  tools: string[];
+  weapons: string[];
+  armor: string[];
+}
 
 export interface FeatureGroup { source: string; items: { level?: number; name: string; description: string }[]; }
 
@@ -66,26 +90,32 @@ export async function loadCharacterView(id: string) {
   });
   if (!character) return null;
 
-  // resolve equipped armor/shield/weapons from SRD equipment
+  // resolve equipped armor/shield/weapons + item weights from SRD equipment
   const equippedItems = character.items.filter((i) => i.equipped && i.srcEquipmentId);
+  const srdBackedItems = character.items.filter((i) => i.srcEquipmentId);
   let equippedArmor: ArmorInput | null = null;
   let equippedShield = false;
   const weapons: EquippedWeapon[] = [];
-  if (equippedItems.length) {
+  let equipWeight = 0; // total weight of SRD-equipment-backed items (× quantity)
+  if (srdBackedItems.length) {
     const srdEquip = await prisma.srdEquipment.findMany({
-      where: { id: { in: equippedItems.map((i) => Number(i.srcEquipmentId)).filter((n) => !isNaN(n)) } },
+      where: { id: { in: srdBackedItems.map((i) => Number(i.srcEquipmentId)).filter((n) => !isNaN(n)) } },
     });
     const byEquipId = new Map(srdEquip.map((e) => [e.id, e]));
-    for (const e of srdEquip) {
+    // Weight of everything carried (equipped or not).
+    for (const item of srdBackedItems) {
+      const e = byEquipId.get(Number(item.srcEquipmentId));
+      if (e?.weight) equipWeight += e.weight * (item.quantity ?? 1);
+    }
+    // Armor/shield + attack list only from equipped items.
+    for (const item of equippedItems) {
+      const e = byEquipId.get(Number(item.srcEquipmentId));
+      if (!e) continue;
       if (e.armorCategory && /shield/i.test(e.name)) equippedShield = true;
       else if (e.armorCategory && e.acBase != null) {
         equippedArmor = { armorCategory: e.armorCategory, acBase: e.acBase, acMaxBonus: e.acMaxBonus };
       }
-    }
-    // Build the attack list from equipped weapons (items with damage dice).
-    for (const item of equippedItems) {
-      const e = byEquipId.get(Number(item.srcEquipmentId));
-      if (!e || !e.damageDice) continue;
+      if (!e.damageDice) continue;
       const props = (e.weaponProperties ?? "").toLowerCase();
       weapons.push({
         name: item.name,
@@ -133,7 +163,11 @@ export async function loadCharacterView(id: string) {
     const ids = character.spells.map((s) => Number(s.spellId)).filter((n) => !isNaN(n));
     const srd = await prisma.srdSpell.findMany({
       where: { id: { in: ids } },
-      select: { id: true, name: true, level: true, school: true, castingTime: true, concentration: true, ritual: true, range: true },
+      select: {
+        id: true, name: true, level: true, school: true, castingTime: true, concentration: true,
+        ritual: true, range: true, duration: true, description: true, higherLevel: true,
+        damageType: true, saveType: true, componentsV: true, componentsS: true, componentsM: true,
+      },
     });
     const byId = new Map(srd.map((s) => [s.id, s]));
     spellDetails = character.spells.map((cs) => {
@@ -143,7 +177,62 @@ export async function loadCharacterView(id: string) {
   }
 
   const features = await resolveFeatures(character);
-  return { character, derived: derive(input), spellDetails, features, weapons };
+  const derived = derive(input);
+
+  // ---- Encumbrance (uses standard rules; variant thresholds provided for the UI) ----
+  const str = character.str;
+  const encumbrance: Encumbrance = {
+    totalWeight: Math.round(equipWeight * 10) / 10,
+    capacity: str * 15,
+    pushDragLift: str * 30,
+    encumberedAt: str * 5,
+    heavyAt: str * 10,
+    status:
+      equipWeight > str * 15 ? "overloaded" :
+      equipWeight > str * 10 ? "heavily" :
+      equipWeight > str * 5 ? "encumbered" : "normal",
+  };
+
+  // ---- Class resource trackers (merge derived max/reset with stored `used`) ----
+  const classForResources = classes.map((c) => ({ name: c.name, subclass: c.subclass, level: c.level }));
+  const derivedResources: DerivedResource[] = deriveResources(classForResources, derived.mods, derived.proficiencyBonus);
+  const storedUsage: Record<string, number> = {};
+  for (const r of character.resources) storedUsage[r.name] = r.used;
+  const resources = mergeResourceUsage(derivedResources, storedUsage);
+
+  // ---- Senses (darkvision from race traits) ----
+  const darkvision = await resolveDarkvision(character.raceId);
+  const senses: Senses = {
+    darkvision,
+    passivePerception: derived.passivePerception,
+    passiveInvestigation: derived.passiveInvestigation,
+    passiveInsight: derived.passiveInsight,
+  };
+
+  // ---- Proficiencies & languages (from proficienciesJson blob) ----
+  const profBlob = safeJson<any>(character.proficienciesJson, {});
+  const asArr = (v: any): string[] => Array.isArray(v) ? v.filter((x) => typeof x === "string") : (typeof v === "string" && v ? v.split(",").map((s) => s.trim()).filter(Boolean) : []);
+  const proficiencies: Proficiencies = {
+    languages: asArr(profBlob.languages),
+    tools: asArr(profBlob.tools),
+    weapons: asArr(profBlob.weapons),
+    armor: asArr(profBlob.armor),
+  };
+
+  return { character, derived, spellDetails, features, weapons, encumbrance, resources, senses, proficiencies };
+}
+
+/** Read a race's Darkvision range (in feet) from its SRD traits, if any. */
+async function resolveDarkvision(raceId: string): Promise<number | null> {
+  const race = await prisma.srdRace.findFirst({ where: { name: raceId }, select: { traits: true } });
+  if (!race?.traits) return null;
+  try {
+    const traits = JSON.parse(race.traits) as { name?: string; description?: string }[];
+    const dv = traits.find((t) => /darkvision|superior darkvision/i.test(t.name ?? ""));
+    if (!dv) return null;
+    const m = (dv.description ?? "").match(/(\d+)\s*(?:feet|ft)/i);
+    return m ? Number(m[1]) : 60;
+  } catch { return null; }
 }
 
 function safeJson<T>(s: string | null | undefined, fallback: T): T {

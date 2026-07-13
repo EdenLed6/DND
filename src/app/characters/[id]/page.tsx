@@ -29,6 +29,10 @@ export default async function CharacterPage({ params }: { params: Promise<{ id: 
         spellDetails={serialize(view.spellDetails ?? [])}
         features={serialize(view.features ?? [])}
         weapons={view.weapons ?? []}
+        encumbrance={view.encumbrance}
+        resources={view.resources}
+        senses={view.senses}
+        proficiencies={view.proficiencies}
         canEdit={canEdit}
         isDM={isDM}
       />
