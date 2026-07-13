@@ -733,3 +733,26 @@ table.sheet tbody tr:nth-child(even) { background: rgba(178, 141, 78, .07); }
 .condition-pill.is-active.cond-tok-arcane { background: #eae4f2; border-color: #9b86b8; box-shadow: 0 0 0 1px #9b86b8 inset; }
 .condition-pill.is-active.cond-tok-warning { background: #f2e6cf; border-color: var(--warning); box-shadow: 0 0 0 1px var(--warning) inset; }
 /* ==================== end conditions system ==================== */
+
+/* --- Sessions (SPEC-DM §5): LIVE status chip + live-session highlight --- */
+.chip-live {
+  background: var(--blood); border-color: var(--wine-dark); color: #fdf6e8;
+  font-weight: 700; animation: live-pulse 2.2s ease-in-out infinite;
+}
+@keyframes live-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(122, 43, 47, .40); }
+  50% { box-shadow: 0 0 0 6px rgba(122, 43, 47, 0); }
+}
+.session-live-card { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold-bright), 0 2px 10px rgba(122, 43, 47, .12); }
+
+/* ============ DM Notes & Party Loot (SPEC-DM §14/§11) ============ */
+/* Secret notes carry a wax-seal wine edge on the DM's side of the screen. */
+.dm-note-secret { border-left: 4px solid var(--wine-dark); }
+/* Freshly revealed handout: brief gold highlight ring that fades out (~3s). */
+.note-flash { animation: note-flash-ring 3s ease-out forwards; }
+@keyframes note-flash-ring {
+  0%, 60% { outline: 2px solid var(--gold); outline-offset: 2px; }
+  100% { outline: 2px solid transparent; outline-offset: 2px; }
+}
+/* Hidden party loot (DM-only rows). */
+.loot-hidden { border-style: dashed; border-color: var(--gold); opacity: .9; }
