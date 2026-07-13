@@ -60,7 +60,29 @@ const CAST: Record<string, SpellCastData> = {
   "finger of death": { save: "con", half: true, damage: "7d8+30", damageType: "necrotic" },
   "flame strike": { save: "dex", half: true, damage: "8d6", damageType: "fire/radiant", upcast: "1d6" },
   "moonbeam": { save: "con", half: true, damage: "2d10", damageType: "radiant", upcast: "1d10" },
+  "flaming sphere": { save: "dex", half: true, damage: "2d6", damageType: "fire", upcast: "1d6" },
+  "spiritual weapon": { attack: true, damage: "1d8", damageType: "force", upcast: "0" },
+  "blight": { save: "con", half: true, damage: "8d8", damageType: "necrotic", upcast: "1d8" },
+  "wall of fire": { save: "dex", half: true, damage: "5d8", damageType: "fire", upcast: "1d8" },
+  "cloudkill": { save: "con", half: true, damage: "5d8", damageType: "poison", upcast: "1d8" },
+  "insect plague": { save: "con", half: true, damage: "4d10", damageType: "piercing", upcast: "1d10" },
+  "sunbeam": { save: "con", half: true, damage: "6d8", damageType: "radiant" },
+  "sunburst": { save: "con", half: true, damage: "12d6", damageType: "radiant" },
+  "fire storm": { save: "dex", half: true, damage: "7d10", damageType: "fire" },
+  "delayed blast fireball": { save: "dex", half: true, damage: "12d6", damageType: "fire", upcast: "1d6" },
+  "harm": { save: "con", half: true, damage: "14d6", damageType: "necrotic" },
+  "meteor swarm": { save: "dex", half: true, damage: "40d6", damageType: "fire/bludgeoning" },
+  "branding smite": { damage: "2d6", damageType: "radiant", upcast: "1d6" },
+  "searing smite": { damage: "1d6", damageType: "fire", upcast: "1d6" },
+  "thunderous smite": { damage: "2d6", damageType: "thunder" },
+  "wrathful smite": { damage: "1d6", damageType: "psychic" },
+  "divine favor": { damage: "1d4", damageType: "radiant" },
+  "hail of thorns": { save: "dex", half: true, damage: "1d10", damageType: "piercing", upcast: "1d10" },
   "sacred weapon": { damage: "", damageType: "radiant" },
+
+  // ---- More healing ----
+  "goodberry": { heal: "10", healUpcast: "0" }, // 10 berries, 1 HP each
+  "life transference": { heal: "8", healUpcast: "2" },
 
   // ---- Healing spells ----
   "cure wounds": { heal: "1d8", addModToHeal: true, healUpcast: "1d8" },

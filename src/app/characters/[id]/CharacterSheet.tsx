@@ -15,7 +15,8 @@ import { SensesPanel } from "./SensesPanel";
 import { ProficienciesPanel } from "./ProficienciesPanel";
 import { DescriptionTab } from "./DescriptionTab";
 import { EncumbranceBar } from "./EncumbranceBar";
-import { rollToTray, rollAttackToTray } from "@/components/DiceTray";
+import { rollToTray, rollAttackToTray, pushTrayEntry } from "@/components/DiceTray";
+import { roll } from "@/lib/dnd/dice";
 import type { EquippedWeapon, Encumbrance, Senses, Proficiencies } from "@/lib/character-view";
 import type { DerivedResource } from "@/lib/dnd/resources";
 
@@ -66,10 +67,48 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
   }
 
   function applyHp(delta: number) {
+    const rawDamage = delta < 0 ? -delta : 0;
     let hp = c.currentHp; let temp = c.tempHp;
     if (delta < 0 && temp > 0) { const a = Math.min(temp, -delta); temp -= a; delta += a; }
     hp = Math.max(0, Math.min(derived.maxHp, hp + delta));
-    patch({ currentHp: hp, tempHp: temp });
+    const body: any = { currentHp: hp, tempHp: temp };
+    // Healing from 0 clears death saves.
+    if (delta > 0 && c.currentHp === 0 && hp > 0) { body.deathSuccess = 0; body.deathFail = 0; }
+    // Concentration: taking damage forces a CON save (DC = max(10, half damage)).
+    if (rawDamage > 0 && c.concentration) {
+      const dc = Math.max(10, Math.floor(rawDamage / 2));
+      const save = roll(`1d20${derived.saves.con.value >= 0 ? "+" : ""}${derived.saves.con.value}`);
+      const held = hp > 0 && save.total >= dc;
+      pushTrayEntry({
+        label: `Concentration — ${c.concentration}`,
+        dice: save.dice, total: save.total, breakdown: save.breakdown,
+        extra: `DC ${dc} CON save`, verdict: held ? "HELD" : "BROKEN", crit: held, fumble: !held,
+      });
+      if (!held) body.concentration = null;
+    }
+    patch(body);
+  }
+
+  function rollDeathSave() {
+    const r = roll("1d20");
+    const nat = r.dice[0]?.value ?? r.total;
+    let successes = c.deathSuccess, fails = c.deathFail;
+    let label = "Death Save", verdict = "";
+    const body: any = {};
+    if (nat === 20) { // regain 1 HP
+      body.currentHp = 1; body.deathSuccess = 0; body.deathFail = 0;
+      verdict = "ALIVE! (nat 20)";
+    } else if (nat === 1) { // two failures
+      fails = Math.min(3, fails + 2); body.deathFail = fails; verdict = "NAT 1 — 2 failures";
+    } else if (nat >= 10) {
+      successes = Math.min(3, successes + 1); body.deathSuccess = successes;
+      verdict = successes >= 3 ? "STABILIZED" : "Success";
+    } else {
+      fails = Math.min(3, fails + 1); body.deathFail = fails;
+      verdict = fails >= 3 ? "DEAD" : "Failure";
+    }
+    pushTrayEntry({ label, dice: r.dice, total: r.total, breakdown: r.breakdown, extra: `${successes}✓ / ${fails}✗`, verdict, crit: nat === 20, fumble: nat === 1 });
+    patch(body);
   }
 
   function toggleCondition(cond: string) {
@@ -326,7 +365,8 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
               </div>
             </div>
             {canUse && c.currentHp === 0 && (
-              <div className="mt-2 flex gap-2 text-xs">
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                <button className="btn-gold" onClick={rollDeathSave}>🎲 Roll Death Save</button>
                 <button className="btn-ghost" onClick={() => patch({ deathSuccess: Math.min(3, c.deathSuccess + 1) })}>+Success</button>
                 <button className="btn-ghost" onClick={() => patch({ deathFail: Math.min(3, c.deathFail + 1) })}>+Failure</button>
                 <button className="btn-ghost" onClick={() => patch({ deathSuccess: 0, deathFail: 0 })}>Reset</button>
