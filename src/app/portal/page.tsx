@@ -15,9 +15,8 @@ export default async function PortalPage({
   if (choose !== "1") {
     const store = await cookies();
     const portal = store.get("dnd_portal")?.value;
-    // Both portals currently land on the dashboard; the shells differentiate later.
     if (portal === "player") redirect("/dashboard");
-    if (portal === "dm") redirect("/dashboard");
+    if (portal === "dm") redirect("/dm");
   }
 
   return <PortalChooser displayName={user.displayName} />;

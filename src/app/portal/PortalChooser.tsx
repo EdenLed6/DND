@@ -10,7 +10,7 @@ export function PortalChooser({ displayName }: { displayName: string }) {
 
   function choose(portal: "player" | "dm") {
     setPortalCookie(portal);
-    router.push("/dashboard");
+    router.push(portal === "dm" ? "/dm" : "/dashboard");
     router.refresh();
   }
 
