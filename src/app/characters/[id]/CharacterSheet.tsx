@@ -20,9 +20,13 @@ import { ProficienciesPanel } from "./ProficienciesPanel";
 import { DescriptionTab } from "./DescriptionTab";
 import { EncumbranceBar } from "./EncumbranceBar";
 import { CharacterHeader } from "./CharacterHeader";
+import { ActionsSection } from "./ActionsSection";
+import { NotesSection } from "./NotesSection";
+import { SpeedDefensesPanel } from "./SpeedDefensesPanel";
+import { RollOptionsBar, consumeRollOptions, decorateRollLabel } from "./RollOptionsBar";
 import { rollToTray, rollAttackToTray, pushTrayEntry } from "@/components/DiceTray";
 import { roll } from "@/lib/dnd/dice";
-import type { EquippedWeapon, Encumbrance, Senses, Proficiencies } from "@/lib/character-view";
+import type { EquippedWeapon, Encumbrance, Senses, Proficiencies, DefensesData } from "@/lib/character-view";
 import type { DerivedResource } from "@/lib/dnd/resources";
 
 const CONDITIONS = ["Blinded","Charmed","Deafened","Frightened","Grappled","Incapacitated","Invisible","Paralyzed","Petrified","Poisoned","Prone","Restrained","Stunned","Unconscious"];
@@ -30,7 +34,7 @@ const CONDITIONS = ["Blinded","Charmed","Deafened","Frightened","Grappled","Inca
 type MergedResource = DerivedResource & { used: number };
 
 // Section navigation (spec §3.3, mapped to existing content).
-type SectionId = "overview" | "abilities" | "skills" | "actions" | "spells" | "inventory" | "features" | "proficiencies" | "background";
+type SectionId = "overview" | "abilities" | "skills" | "actions" | "spells" | "inventory" | "features" | "proficiencies" | "background" | "notes";
 const ALL_SECTIONS: { id: SectionId; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "abilities", label: "Abilities & Saves" },
@@ -41,12 +45,14 @@ const ALL_SECTIONS: { id: SectionId; label: string }[] = [
   { id: "features", label: "Features" },
   { id: "proficiencies", label: "Proficiencies" },
   { id: "background", label: "Background" },
+  { id: "notes", label: "Notes" },
 ];
 
-export function CharacterSheet({ initialCharacter, derived, spellDetails, features, weapons, encumbrance, resources: initialResources, senses, proficiencies, canEdit, isDM }: {
+export function CharacterSheet({ initialCharacter, derived, spellDetails, features, weapons, encumbrance, resources: initialResources, senses, proficiencies, defenses, acBreakdown, canEdit, isDM, isOwner }: {
   initialCharacter: any; derived: DerivedCharacter; spellDetails: any[]; features: any[]; weapons: EquippedWeapon[];
   encumbrance: Encumbrance; resources: MergedResource[]; senses: Senses; proficiencies: Proficiencies;
-  canEdit: boolean; isDM: boolean;
+  defenses: DefensesData; acBreakdown?: string;
+  canEdit: boolean; isDM: boolean; isOwner: boolean;
 }) {
   const router = useRouter();
   const [c, setC] = useState(initialCharacter);
@@ -86,6 +92,25 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
     const dmgExpr = `${w.damageDice}${formatMod(abMod)}`;
     return { ab, abMod, toHit, dmgExpr };
   }
+
+  // ---- Roll options (SPEC-PLAYER §5.1/§6.3): every click-to-roll consumes the
+  // RollOptionsBar state — adv/dis + situational bonus — then (by default) resets it.
+  function rollWithOpts(label: string, expr: string) {
+    const o = consumeRollOptions();
+    rollToTray(decorateRollLabel(label, o), o.bonus !== 0 ? `${expr}${formatMod(o.bonus)}` : expr, {
+      advantage: o.advantage, disadvantage: o.disadvantage,
+    });
+  }
+  function attackWithOpts(label: string, toHit: number, dmgExpr: string, dmgType: string) {
+    const o = consumeRollOptions();
+    rollAttackToTray(decorateRollLabel(label, o), toHit + o.bonus, dmgExpr, dmgType, {
+      advantage: o.advantage, disadvantage: o.disadvantage,
+    });
+  }
+
+  // ---- Pinned skills (SPEC-PLAYER §6.3) — persisted per character in localStorage.
+  const [pins, togglePin] = usePinnedSkills(c.id);
+  const favoriteSkills = pins.filter((p) => derived.skills[p]);
 
   useRealtime({
     "character:updated": (p: any) => {
@@ -212,13 +237,13 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
   // Cards — each defined ONCE, referenced by one or more sections.
   // ================================================================
 
-  const renderAbilities = () => (
+  const renderAbilities = (showFavorites = false) => (
     <div className="card">
       <div className="mb-2 text-xs uppercase text-[#5e5448]">Proficiency Bonus <b className="text-gold">{formatMod(derived.proficiencyBonus)}</b></div>
       <div className="grid grid-cols-3 gap-2">
         {ABILITIES.map((a) => (
           <button key={a} type="button" className="stat-box rollable"
-            onClick={() => rollToTray(`${ABILITY_LABELS[a]} check`, `1d20${formatMod(derived.mods[a])}`)}
+            onClick={() => rollWithOpts(`${ABILITY_LABELS[a]} check`, `1d20${formatMod(derived.mods[a])}`)}
             title={`Roll ${ABILITY_LABELS[a]} check`}>
             <div className="text-[10px] uppercase text-[#5e5448]">{ABILITY_LABELS[a]}</div>
             <div className="font-display text-xl">{formatMod(derived.mods[a])}</div>
@@ -227,6 +252,20 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
         ))}
       </div>
       <p className="mt-2 text-center text-[11px] text-[#857866]">Tap an ability to roll a check.</p>
+      {showFavorites && favoriteSkills.length > 0 && (
+        <div className="hairline mt-3 pt-2">
+          <div className="mb-1 text-[10px] uppercase text-[#5e5448]">Favorites</div>
+          <div className="flex flex-wrap gap-1.5">
+            {favoriteSkills.map((name) => (
+              <button key={name} type="button" className="roll-chip roll-chip-sm"
+                onClick={() => rollWithOpts(name, `1d20${formatMod(derived.skills[name].value)}`)}
+                title={`Roll ${name}`}>
+                {name} {formatMod(derived.skills[name].value)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -237,7 +276,7 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
         {ABILITIES.map((a) => (
           <button key={a} type="button"
             className="rollable flex justify-between rounded border border-transparent px-2 py-1 text-left"
-            onClick={() => rollToTray(`${ABILITY_LABELS[a]} save`, `1d20${formatMod(derived.saves[a].value)}`)}
+            onClick={() => rollWithOpts(`${ABILITY_LABELS[a]} save`, `1d20${formatMod(derived.saves[a].value)}`)}
             title={`Roll ${ABILITY_LABELS[a]} save`}>
             <span className={derived.saves[a].proficient ? "text-gold" : ""}>{derived.saves[a].proficient ? "●" : "○"} {a.toUpperCase()}</span>
             <b>{formatMod(derived.saves[a].value)}</b>
@@ -247,19 +286,42 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
     </div>
   );
 
+  const renderSkillRow = (name: string) => {
+    const s = derived.skills[name];
+    const isPinned = pins.includes(name);
+    return (
+      <tr key={name} className="rollable" onClick={() => rollWithOpts(name, `1d20${formatMod(s.value)}`)} title={`Roll ${name}`}>
+        <td className="w-7">
+          <button type="button" className="pin-btn" data-pinned={isPinned || undefined}
+            onClick={(e) => { e.stopPropagation(); togglePin(name); }}
+            aria-pressed={isPinned} aria-label={isPinned ? `Unpin ${name}` : `Pin ${name}`}
+            title={isPinned ? "Unpin from favorites" : "Pin to favorites"}>
+            <PinIcon filled={isPinned} />
+          </button>
+        </td>
+        <td className="w-6">{s.expertise ? "◆" : s.proficient ? "●" : "○"}</td>
+        <td>{name}</td>
+        <td className="text-[#5e5448]">{s.ability.toUpperCase()}</td>
+        <td className="text-right"><b>{formatMod(s.value)}</b></td>
+      </tr>
+    );
+  };
+
   const renderSkills = () => (
     <div className="card">
       <h3 className="mb-2 font-display text-gold">Skills</h3>
+      {favoriteSkills.length > 0 && (
+        <>
+          <div className="skills-minihead">Pinned</div>
+          <table className="sheet">
+            <tbody>{favoriteSkills.map(renderSkillRow)}</tbody>
+          </table>
+          <div className="skills-minihead mt-2">All Skills</div>
+        </>
+      )}
       <table className="sheet">
         <tbody>
-          {Object.entries(derived.skills).map(([name, s]) => (
-            <tr key={name} className="rollable" onClick={() => rollToTray(name, `1d20${formatMod(s.value)}`)} title={`Roll ${name}`}>
-              <td className="w-6">{s.expertise ? "◆" : s.proficient ? "●" : "○"}</td>
-              <td>{name}</td>
-              <td className="text-[#5e5448]">{s.ability.toUpperCase()}</td>
-              <td className="text-right"><b>{formatMod(s.value)}</b></td>
-            </tr>
-          ))}
+          {Object.keys(derived.skills).filter((name) => !favoriteSkills.includes(name)).map(renderSkillRow)}
         </tbody>
       </table>
       <div className="mt-2 flex gap-2 text-xs text-[#5e5448]">
@@ -273,42 +335,25 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
     <div className="card grid grid-cols-3 gap-2 text-center">
       <div className="stat-box"><div className="text-[10px] text-[#5e5448]">AC</div><div className="font-display text-2xl text-gold">{derived.ac}</div></div>
       <button type="button" className="stat-box rollable"
-        onClick={() => rollToTray("Initiative", `1d20${formatMod(derived.initiative)}`)} title="Roll initiative">
+        onClick={() => rollWithOpts("Initiative", `1d20${formatMod(derived.initiative)}`)} title="Roll initiative">
         <div className="text-[10px] text-[#5e5448]">Initiative</div><div className="font-display text-2xl">{formatMod(derived.initiative)}</div>
       </button>
       <div className="stat-box"><div className="text-[10px] text-[#5e5448]">Speed</div><div className="font-display text-2xl">{derived.speed}</div></div>
     </div>
   );
 
-  const renderAttacks = () => (
-    <div className="card">
-      <h3 className="mb-1 font-display text-gold">Attacks</h3>
-      <p className="mb-2 text-[11px] text-[#857866]">Tap an attack to roll to-hit and damage.</p>
-      {weapons.length === 0 ? (
-        <p className="text-sm text-[#5e5448]">No weapons equipped. Equip one in your inventory.</p>
-      ) : (
-        <div className="space-y-1 text-sm">
-          {weapons.map((w, i) => {
-            const atk = weaponAttack(w);
-            return (
-              <button key={i} type="button"
-                className="rollable flex w-full items-center justify-between gap-2 rounded border border-transparent px-2 py-1.5 text-left"
-                onClick={() => rollAttackToTray(`${w.name} attack`, atk.toHit, atk.dmgExpr, w.damageType)}
-                title={`Attack with ${w.name}`}>
-                <span>
-                  <b>{w.name}</b>{" "}
-                  <span className="text-[11px] text-[#857866]">· {w.ranged ? "Ranged" : "Melee"}{w.properties ? ` · ${w.properties}` : ""}</span>
-                </span>
-                <span className="flex items-center gap-3 whitespace-nowrap">
-                  <span>{formatMod(atk.toHit)} <span className="text-[10px] text-[#857866]">hit</span></span>
-                  <span className="text-gold">{w.damageDice}{formatMod(atk.abMod)} {w.damageType}</span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
+  // Actions section (spec §7) — attack rolls funnel through weaponAttack +
+  // attackWithOpts so they honor the roll options bar.
+  const renderActions = () => (
+    <ActionsSection
+      weapons={weapons}
+      derived={derived}
+      canUse={canUse}
+      onWeaponAttack={(w) => {
+        const atk = weaponAttack(w);
+        attackWithOpts(`${w.name} attack`, atk.toHit, atk.dmgExpr, w.damageType);
+      }}
+    />
   );
 
   const renderHp = () => (
@@ -491,6 +536,8 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
               onClick={() => selectSection(s.id)}>{s.label}</button>
           ))}
         </div>
+        {/* Roll options (adv/dis + situational) — armed for the next roll, all sections (Play mode) */}
+        {!editMode && <RollOptionsBar />}
       </CharacterHeader>
 
       {canEdit && editMode && (
@@ -512,7 +559,7 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
       {section === "overview" && (
         <div className="grid items-start gap-4 lg:grid-cols-2">
           <div className="space-y-4">
-            {renderAbilities()}
+            {renderAbilities(true)}
             {renderCombatStats()}
             {renderHp()}
           </div>
@@ -532,13 +579,21 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
           </div>
           <div className="space-y-4">
             {renderSaves()}
+            <SpeedDefensesPanel
+              defenses={defenses}
+              walkingSpeed={derived.speed}
+              ac={derived.ac}
+              acBreakdown={acBreakdown}
+              canEdit={canEditDef}
+              onSave={(d) => patch({ defensesJson: JSON.stringify(d) })}
+            />
           </div>
         </div>
       )}
 
       {section === "skills" && <div className="max-w-2xl">{renderSkills()}</div>}
 
-      {section === "actions" && <div className="max-w-2xl">{renderAttacks()}</div>}
+      {section === "actions" && <div className="max-w-2xl">{renderActions()}</div>}
 
       {section === "spells" && <div className="max-w-3xl">{renderSpells()}</div>}
 
@@ -562,6 +617,12 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
         <DescriptionTab character={c} canEdit={canEditDef} onSave={saveDescription} />
       )}
 
+      {section === "notes" && (
+        <div className="max-w-3xl">
+          <NotesSection characterId={c.id} canUse={canUse} isOwner={isOwner} isDM={isDM} />
+        </div>
+      )}
+
       {isDM && <div className="text-center text-xs text-[#5e5448]">👑 DM Mode — you have full control over this character</div>}
     </main>
   );
@@ -581,6 +642,38 @@ function SlotRow({ level, total, used, canEdit, onChange }: { level: number; tot
       </div>
       <span className="text-xs text-[#5e5448]">{total - used}/{total}</span>
     </div>
+  );
+}
+
+// ---- Pinned skills (SPEC-PLAYER §6.3) — persisted in localStorage per character.
+function usePinnedSkills(characterId: string): [string[], (name: string) => void] {
+  const [pins, setPins] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`dnd_pins_${characterId}`);
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(parsed)) setPins(parsed.filter((x) => typeof x === "string"));
+    } catch { /* corrupted storage — start empty */ }
+  }, [characterId]);
+  function togglePin(name: string) {
+    setPins((prev) => {
+      const next = prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name];
+      try { localStorage.setItem(`dnd_pins_${characterId}`, JSON.stringify(next)); } catch { /* storage unavailable */ }
+      return next;
+    });
+  }
+  return [pins, togglePin];
+}
+
+// Small quill-tack pin (14px inline SVG — filled when pinned).
+function PinIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"
+      fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 17v5" />
+      <path d="M9 10.76V7a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3.76l2.26 2.26c.19.18.29.44.29.7V15a1 1 0 0 1-1 1H7.45a1 1 0 0 1-1-1v-1.27c0-.27.1-.52.29-.71z" />
+    </svg>
   );
 }
 

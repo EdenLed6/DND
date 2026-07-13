@@ -34,8 +34,11 @@ export default async function CharacterPage({ params }: { params: Promise<{ id: 
         resources={view.resources}
         senses={view.senses}
         proficiencies={view.proficiencies}
+        defenses={view.defenses}
+        acBreakdown={view.acBreakdown}
         canEdit={canEdit}
         isDM={isDM}
+        isOwner={isOwner}
       />
       <DiceTray />
       {view.character.campaignId && (

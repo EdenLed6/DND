@@ -36,6 +36,7 @@ const patchSchema = z.object({
   backstory: z.string().max(20000).nullable().optional(),
   notes: z.string().max(20000).nullable().optional(),
   spellcastingJson: z.string().max(20000).optional(),
+  defensesJson: z.string().max(4000).optional(),
 });
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {

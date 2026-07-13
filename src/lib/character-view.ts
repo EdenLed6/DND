@@ -29,6 +29,15 @@ export interface Proficiencies {
 
 export interface FeatureGroup { source: string; items: { level?: number; name: string; description: string }[]; }
 
+/** Speed & Defenses (SPEC-PLAYER §11) — canonical type; SpeedDefensesPanel re-exports it. */
+export interface DefensesData {
+  resistances: string[];
+  immunities: string[];
+  vulnerabilities: string[];
+  conditionImmunities: string[];
+  speeds: { fly?: number; swim?: number; climb?: number; burrow?: number };
+}
+
 export interface EquippedWeapon {
   name: string;
   damageDice: string;   // e.g. "1d8"
@@ -94,6 +103,7 @@ export async function loadCharacterView(id: string) {
   const equippedItems = character.items.filter((i) => i.equipped && i.srcEquipmentId);
   const srdBackedItems = character.items.filter((i) => i.srcEquipmentId);
   let equippedArmor: ArmorInput | null = null;
+  let equippedArmorName: string | null = null;
   let equippedShield = false;
   const weapons: EquippedWeapon[] = [];
   let equipWeight = 0; // total weight of SRD-equipment-backed items (× quantity)
@@ -114,6 +124,7 @@ export async function loadCharacterView(id: string) {
       if (e.armorCategory && /shield/i.test(e.name)) equippedShield = true;
       else if (e.armorCategory && e.acBase != null) {
         equippedArmor = { armorCategory: e.armorCategory, acBase: e.acBase, acMaxBonus: e.acMaxBonus };
+        equippedArmorName = e.name;
       }
       if (!e.damageDice) continue;
       const props = (e.weaponProperties ?? "").toLowerCase();
@@ -219,7 +230,61 @@ export async function loadCharacterView(id: string) {
     armor: asArr(profBlob.armor),
   };
 
-  return { character, derived, spellDetails, features, weapons, encumbrance, resources, senses, proficiencies };
+  // ---- Speed & Defenses (SPEC-PLAYER §11) ----
+  const defenses = parseDefenses(character.defensesJson);
+  const acBreakdown = buildAcBreakdown(input, derived.mods, equippedArmorName);
+
+  return { character, derived, spellDetails, features, weapons, encumbrance, resources, senses, proficiencies, defenses, acBreakdown };
+}
+
+/** Parse the defensesJson blob into a well-formed DefensesData (tolerates missing/corrupt data). */
+function parseDefenses(raw: string | null | undefined): DefensesData {
+  const blob = safeJson<any>(raw, {});
+  const asStrArr = (v: any): string[] => Array.isArray(v) ? v.filter((x) => typeof x === "string" && x.trim()).map((x) => x.trim()) : [];
+  const asSpeed = (v: any): number | undefined => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? Math.round(n) : undefined;
+  };
+  const speedsBlob = blob?.speeds && typeof blob.speeds === "object" ? blob.speeds : {};
+  const speeds: DefensesData["speeds"] = {};
+  const fly = asSpeed(speedsBlob.fly); if (fly != null) speeds.fly = fly;
+  const swim = asSpeed(speedsBlob.swim); if (swim != null) speeds.swim = swim;
+  const climb = asSpeed(speedsBlob.climb); if (climb != null) speeds.climb = climb;
+  const burrow = asSpeed(speedsBlob.burrow); if (burrow != null) speeds.burrow = burrow;
+  return {
+    resistances: asStrArr(blob?.resistances),
+    immunities: asStrArr(blob?.immunities),
+    vulnerabilities: asStrArr(blob?.vulnerabilities),
+    conditionImmunities: asStrArr(blob?.conditionImmunities),
+    speeds,
+  };
+}
+
+/**
+ * Human-readable AC breakdown that mirrors computeAc() in lib/dnd/character.ts:
+ * "10 + DEX (+3)", "Chain Mail 16", "Leather 11 + DEX (+3) + Shield (+2)", …
+ */
+function buildAcBreakdown(c: CharacterInput, mods: Record<Ability, number>, armorName: string | null): string {
+  if (c.acOverride != null) return `Manual override ${c.acOverride}`;
+  const fmt = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
+  let base: string;
+  const armor = c.equippedArmor;
+  if (armor && armor.acBase != null) {
+    const name = armorName ?? "Armor";
+    const cat = armor.armorCategory ?? "";
+    if (/light/i.test(cat)) base = `${name} ${armor.acBase} + DEX (${fmt(mods.dex)})`;
+    else if (/medium/i.test(cat)) base = `${name} ${armor.acBase} + DEX (${fmt(Math.min(mods.dex, armor.acMaxBonus ?? 2))}, max ${fmt(armor.acMaxBonus ?? 2)})`;
+    else if (/heavy/i.test(cat)) base = `${name} ${armor.acBase}`;
+    else base = `${name} ${armor.acBase} + DEX (${fmt(mods.dex)})`;
+  } else if (c.unarmoredDefense === "barbarian") {
+    base = `10 + DEX (${fmt(mods.dex)}) + CON (${fmt(mods.con)})`;
+  } else if (c.unarmoredDefense === "monk") {
+    base = `10 + DEX (${fmt(mods.dex)}) + WIS (${fmt(mods.wis)})`;
+  } else {
+    base = `10 + DEX (${fmt(mods.dex)})`;
+  }
+  if (c.equippedShield) base += " + Shield (+2)";
+  return base;
 }
 
 /** Read a race's Darkvision range (in feet) from its SRD traits, if any. */
