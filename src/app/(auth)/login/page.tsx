@@ -48,7 +48,7 @@ export default function LoginPage() {
         <div className="mb-6 text-center">
           <div className="text-4xl">🐉</div>
           <h1 className="font-display text-2xl text-gold">D&D 5e Campaign Manager</h1>
-          <p className="text-sm text-[#6b5a42]">Campaign management · Characters · Live combat</p>
+          <p className="text-sm text-[#5e5448]">Campaign management · Characters · Live combat</p>
         </div>
 
         <div className="mb-4 flex gap-2">
@@ -62,8 +62,8 @@ export default function LoginPage() {
               <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-[#4285F4]">G</span>
               Continue with Google
             </a>
-            <div className="mb-3 flex items-center gap-2 text-xs text-[#8a7a5f]">
-              <div className="h-px flex-1 bg-[#e0d4b4]" /> or <div className="h-px flex-1 bg-[#e0d4b4]" />
+            <div className="mb-3 flex items-center gap-2 text-xs text-[#857866]">
+              <div className="h-px flex-1 bg-[#dfd5b8]" /> or <div className="h-px flex-1 bg-[#dfd5b8]" />
             </div>
           </>
         )}
@@ -82,10 +82,10 @@ export default function LoginPage() {
           <div>
             <div className="flex items-center justify-between">
               <label className="label">Password</label>
-              {mode === "login" && <Link href="/forgot" className="mb-1 text-xs text-[#6b5a42] hover:text-gold">Forgot password?</Link>}
+              {mode === "login" && <Link href="/forgot" className="mb-1 text-xs text-[#5e5448] hover:text-gold">Forgot password?</Link>}
             </div>
             <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={mode === "register" ? 8 : undefined} />
-            {mode === "register" && <p className="mt-1 text-xs text-[#8a7a5f]">At least 8 characters.</p>}
+            {mode === "register" && <p className="mt-1 text-xs text-[#857866]">At least 8 characters.</p>}
           </div>
           {error && <p className="text-sm text-red-700">{error}</p>}
           <button className="btn-primary w-full" disabled={busy}>

@@ -65,7 +65,7 @@ export default async function Compendium({
           <input className="input" name="q" defaultValue={q} placeholder="Search by name..." />
           <button className="btn-primary">Search</button>
         </form>
-        <div className="text-xs text-[#6b5a42]">{rows.length} results · click for full details</div>
+        <div className="text-xs text-[#5e5448]">{rows.length} results · click for full details</div>
         <CompendiumList rows={rows} tab={tab} />
       </main>
     </div>

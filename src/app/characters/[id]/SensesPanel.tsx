@@ -12,13 +12,13 @@ export function SensesPanel({ senses }: { senses: Senses }) {
       <div className="grid grid-cols-3 gap-2 text-center">
         {boxes.map((b) => (
           <div key={b.label} className="stat-box">
-            <div className="text-[10px] uppercase text-[#6b5a42]">{b.label}</div>
+            <div className="text-[10px] uppercase text-[#5e5448]">{b.label}</div>
             <div className="font-display text-2xl text-gold">{b.value}</div>
           </div>
         ))}
       </div>
       <div className="mt-3 flex items-center justify-between text-sm">
-        <span className="text-[#6b5a42]">Darkvision</span>
+        <span className="text-[#5e5448]">Darkvision</span>
         <b>{senses.darkvision != null ? `${senses.darkvision} ft` : "Normal vision"}</b>
       </div>
     </div>

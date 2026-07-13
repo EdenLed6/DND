@@ -42,7 +42,7 @@ function ResetForm() {
       <div>
         <label className="label">New Password</label>
         <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
-        <p className="mt-1 text-xs text-[#8a7a5f]">At least 8 characters.</p>
+        <p className="mt-1 text-xs text-[#857866]">At least 8 characters.</p>
       </div>
       <div>
         <label className="label">Confirm Password</label>
@@ -62,7 +62,7 @@ export default function ResetPage() {
           <div className="text-4xl">🔒</div>
           <h1 className="font-display text-2xl text-gold">Choose a new password</h1>
         </div>
-        <Suspense fallback={<p className="text-center text-sm text-[#6b5a42]">Loading…</p>}>
+        <Suspense fallback={<p className="text-center text-sm text-[#5e5448]">Loading…</p>}>
           <ResetForm />
         </Suspense>
       </div>

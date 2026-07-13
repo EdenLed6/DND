@@ -10,27 +10,36 @@
    ============================================================ */
 :root {
   color-scheme: light;
-  --bg: #eee5ce;            /* page parchment */
-  --panel: #faf4e3;         /* card cream */
-  --panel-2: #f6eed9;
-  --inset: #f1e8d0;         /* inset wells */
-  --line: #cdb98c;          /* gold-tan border */
-  --line-soft: #e0d4b4;     /* hairline */
-  --ink: #2a1f10;           /* body text — warm near-black */
-  --ink-dim: #6b5a42;       /* secondary text */
-  --ink-faint: #8a7a5f;     /* tertiary text */
-  --heading: #58180d;       /* PHB maroon for display headings */
-  --gold: #b28d4e;          /* antique gold (borders, buttons) */
-  --gold-bright: #d3b271;
-  --gold-rule: #c9ad6a;     /* the thin rule under headings */
-  --gold-text: #7f6a2c;     /* gold that reads as text on cream */
-  --blood: #8a2018;
-  --blood-bright: #a3312a;
-  --arcane: #5a3d8f;
-  --forest: #3f6212;
+  /* Light Fantasy Rulebook tokens — SPEC-v2.he.md §4 */
+  --bg: #f3ecd9;            /* canvas */
+  --panel: #fbf7ea;         /* paper */
+  --panel-2: #f6efdc;
+  --inset: #e9dfc5;         /* paper-deep */
+  --line: #cdbf9f;
+  --line-soft: #dfd5b8;
+  --line-strong: #a38c62;
+  --ink: #2b241d;
+  --ink-dim: #5e5448;
+  --ink-faint: #857866;
+  --heading: #7a2b2f;       /* wine — headings, section labels, active states */
+  --wine-dark: #552025;
+  --gold: #b58a42;          /* borders, accents, ornaments, focus */
+  --gold-bright: #d7c08a;   /* gold-soft */
+  --gold-rule: #b58a42;     /* the thin rule under headings */
+  --gold-text: #8a6b30;     /* gold that reads as text on paper */
+  --blood: #7a2b2f;         /* primary action = wine */
+  --blood-bright: #93393e;
+  --arcane: #6e5b9b;        /* magic */
+  --sage: #8c9877;          /* healing / nature / success-ish */
+  --mist-blue: #8da7b4;     /* arcane data / informational */
+  --rust: #a85d3b;          /* monsters / fire / destructive */
+  --forest: #6f8a5b;        /* success */
+  --warning: #b98338;
+  --danger: #a33f3f;
+  --font-ui: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
   --radius: 10px;
   --radius-sm: 7px;
-  --shadow: 0 1px 2px rgba(88, 52, 10, .10), 0 8px 22px rgba(88, 52, 10, .10);
+  --shadow: 0 1px 2px rgba(85, 32, 37, .08), 0 8px 22px rgba(85, 32, 37, .08);
   --tap: 44px; /* min touch target */
 }
 
@@ -47,9 +56,16 @@ body {
     radial-gradient(1400px 900px at 50% 40%, rgba(255, 252, 240, .55), transparent 70%),
     var(--bg);
   color: var(--ink);
-  font-family: "Alegreya Sans", "Gill Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  /* Body reading text is a readable serif (SPEC §4: Crimson Pro); UI controls use --font-ui. */
+  font-family: "Crimson Pro", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  font-size: 17px;
+  line-height: 1.55;
   min-height: 100dvh;
 }
+
+/* UI chrome (buttons, labels, inputs, chips, tabs, nav) uses the clean sans. */
+.btn, .btn-primary, .btn-gold, .btn-ghost, .input, .label, .chip, .chip-gold,
+.tab, .bottom-nav, table.sheet th, .dice-tray-lbl, .dice-tray-title { font-family: var(--font-ui); }
 
 .font-display {
   font-family: "Cinzel", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;

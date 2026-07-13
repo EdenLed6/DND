@@ -30,7 +30,7 @@ export function ProficienciesPanel({
         <div className="space-y-3">
           {nonEmpty.map((s) => (
             <div key={s.label}>
-              <div className="mb-1 text-xs uppercase tracking-wide text-[#6b5a42]">{s.label}</div>
+              <div className="mb-1 text-xs uppercase tracking-wide text-[#5e5448]">{s.label}</div>
               <div className="flex flex-wrap gap-1">
                 {s.items.map((it, i) => (
                   <span key={`${it}-${i}`} className="chip">{it}</span>

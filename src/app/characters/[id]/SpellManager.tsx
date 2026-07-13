@@ -27,27 +27,27 @@ export function SpellManager({ characterId, spells, casterClass, canEdit, canUse
   const levels = [...byLevel.keys()].sort((a, b) => a - b);
 
   return (
-    <div className="mt-3 border-t border-[#e0d4b4] pt-2">
+    <div className="mt-3 border-t border-[#dfd5b8] pt-2">
       <div className="mb-1 flex items-center justify-between">
-        <span className="text-sm text-[#6b5a42]">Known Spells ({spells.length})</span>
+        <span className="text-sm text-[#5e5448]">Known Spells ({spells.length})</span>
         {canEdit && <button className="btn-ghost !py-0.5 text-xs" onClick={() => setShowAdd(true)}>+ Add Spell</button>}
       </div>
-      {levels.length === 0 && <p className="text-xs text-[#6b5a42]">No spells. Add from the class list.</p>}
+      {levels.length === 0 && <p className="text-xs text-[#5e5448]">No spells. Add from the class list.</p>}
       {levels.map((lvl) => (
         <div key={lvl} className="mb-1">
-          <div className="text-[10px] uppercase text-[#6b5a42]">{lvl === 0 ? "Cantrips" : `Level ${lvl}`}</div>
+          <div className="text-[10px] uppercase text-[#5e5448]">{lvl === 0 ? "Cantrips" : `Level ${lvl}`}</div>
           {byLevel.get(lvl)!.map((s) => (
             <div key={s.id} className="flex items-center justify-between gap-1 text-sm">
               <span className="flex items-center gap-1">
                 {lvl > 0 && canPrepare && (
                   <button title="prepared" onClick={() => togglePrepared(s.id, !s.prepared)}
-                    className={`h-3 w-3 rounded-sm border ${s.prepared ? "bg-gold border-gold" : "border-[#cdb98c]"}`} />
+                    className={`h-3 w-3 rounded-sm border ${s.prepared ? "bg-gold border-gold" : "border-[#cdbf9f]"}`} />
                 )}
                 {s.name}
                 {s.concentration && <span className="text-[10px] text-arcane">C</span>}
-                {s.ritual && <span className="text-[10px] text-[#6b5a42]">R</span>}
+                {s.ritual && <span className="text-[10px] text-[#5e5448]">R</span>}
               </span>
-              {canEdit && <button className="text-xs text-[#6b5a42] hover:text-red-700" onClick={() => remove(s.id)}>✕</button>}
+              {canEdit && <button className="text-xs text-[#5e5448] hover:text-red-700" onClick={() => remove(s.id)}>✕</button>}
             </div>
           ))}
         </div>
@@ -98,12 +98,12 @@ function AddSpellModal({ characterId, casterClass, onClose }: { characterId: str
         </div>
         <div className="max-h-72 space-y-1 overflow-y-auto text-sm">
           {rows.map((s) => (
-            <div key={s.id} className="flex items-center justify-between border-b border-[#e0d4b4] py-1">
-              <span>{s.name} <span className="text-xs text-[#6b5a42]">{s.level === 0 ? "Cantrip" : `L${s.level}`} · {s.school}</span></span>
+            <div key={s.id} className="flex items-center justify-between border-b border-[#dfd5b8] py-1">
+              <span>{s.name} <span className="text-xs text-[#5e5448]">{s.level === 0 ? "Cantrip" : `L${s.level}`} · {s.school}</span></span>
               <button className="btn-ghost !py-0.5" onClick={() => add(s.id)}>+ Add</button>
             </div>
           ))}
-          {rows.length === 0 && <p className="text-[#6b5a42]">No results.</p>}
+          {rows.length === 0 && <p className="text-[#5e5448]">No results.</p>}
         </div>
       </div>
     </div>

@@ -30,19 +30,19 @@ export default async function Dashboard() {
         <section>
           <h2 className="mb-3 font-display text-xl text-gold">Campaigns I DM</h2>
           {owned.length === 0 ? (
-            <p className="text-sm text-[#6b5a42]">Nothing yet. Create a new campaign to get started.</p>
+            <p className="text-sm text-[#5e5448]">Nothing yet. Create a new campaign to get started.</p>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {owned.map((c) => (
                 <Link key={c.id} href={`/campaigns/${c.id}`} className="card hover:border-gold">
                   <div className="font-display text-lg">{c.name}</div>
-                  <div className="text-sm text-[#6b5a42]">{c.description || "—"}</div>
+                  <div className="text-sm text-[#5e5448]">{c.description || "—"}</div>
                   <div className="mt-2 flex gap-2 text-xs">
                     <span className="chip">👥 {c._count.members} players</span>
                     <span className="chip">🎭 {c._count.characters} characters</span>
                     <span className="chip">DM</span>
                   </div>
-                  <div className="mt-2 text-xs text-[#6b5a42]">Invite code: <code className="text-gold">{c.inviteCode}</code></div>
+                  <div className="mt-2 text-xs text-[#5e5448]">Invite code: <code className="text-gold">{c.inviteCode}</code></div>
                 </Link>
               ))}
             </div>
@@ -52,13 +52,13 @@ export default async function Dashboard() {
         <section>
           <h2 className="mb-3 font-display text-xl text-gold">Campaigns I Play In</h2>
           {memberships.length === 0 ? (
-            <p className="text-sm text-[#6b5a42]">Join a campaign with an invite code from your DM.</p>
+            <p className="text-sm text-[#5e5448]">Join a campaign with an invite code from your DM.</p>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {memberships.map((m) => (
                 <Link key={m.id} href={`/campaigns/${m.campaign.id}`} className="card hover:border-gold">
                   <div className="font-display text-lg">{m.campaign.name}</div>
-                  <div className="text-sm text-[#6b5a42]">DM: {m.campaign.dm.displayName}</div>
+                  <div className="text-sm text-[#5e5448]">DM: {m.campaign.dm.displayName}</div>
                   <span className="chip mt-2">{m.role === "PLAYER" ? "Player" : "Spectator"}</span>
                 </Link>
               ))}
@@ -69,7 +69,7 @@ export default async function Dashboard() {
         <section>
           <h2 className="mb-3 font-display text-xl text-gold">My Characters</h2>
           {characters.length === 0 ? (
-            <p className="text-sm text-[#6b5a42]">Create a new character.</p>
+            <p className="text-sm text-[#5e5448]">Create a new character.</p>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {characters.map((ch) => {
@@ -77,7 +77,7 @@ export default async function Dashboard() {
                 return (
                   <Link key={ch.id} href={`/characters/${ch.id}`} className="card hover:border-gold">
                     <div className="font-display text-lg">{ch.name}</div>
-                    <div className="text-sm text-[#6b5a42]">
+                    <div className="text-sm text-[#5e5448]">
                       Level {levelForXp(ch.xp)} · {ch.classes.map((c) => c.classId).join(", ") || "—"} {cls}
                     </div>
                     {ch.campaign && <span className="chip mt-2">📖 {ch.campaign.name}</span>}

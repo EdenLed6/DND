@@ -37,7 +37,7 @@ export function PwaRegister() {
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-[60] p-3" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}>
-      <div className="mx-auto flex max-w-md items-center gap-3 rounded-xl border border-[#cdb98c] bg-[#faf4e3] p-3 shadow-2xl">
+      <div className="mx-auto flex max-w-md items-center gap-3 rounded-xl border border-[#cdbf9f] bg-[#fbf7ea] p-3 shadow-2xl">
         <img src="/icons/icon-192.png" alt="" width={40} height={40} className="rounded-lg" />
         <div className="flex-1 text-sm">
           <div className="font-display text-gold">Install the app</div>

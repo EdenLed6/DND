@@ -28,10 +28,10 @@ export function InventoryManager({ characterId, items, canEdit, canUse, carryCap
         <h3 className="font-display text-gold">Equipment</h3>
         {canEdit && <button className="btn-ghost !py-0.5" onClick={() => setShowAdd(true)}>+ Add</button>}
       </div>
-      {items.length === 0 ? <p className="text-sm text-[#6b5a42]">Empty.</p> : (
+      {items.length === 0 ? <p className="text-sm text-[#5e5448]">Empty.</p> : (
         <ul className="text-sm">
           {items.map((it) => (
-            <li key={it.id} className="flex items-center justify-between gap-2 border-t border-[#e0d4b4] py-1">
+            <li key={it.id} className="flex items-center justify-between gap-2 border-t border-[#dfd5b8] py-1">
               <span className="flex-1">{it.equipped ? "🛡 " : ""}{it.name}{it.quantity > 1 ? ` ×${it.quantity}` : ""}
                 {it.attuned && <span className="ml-1 text-xs text-arcane">attuned</span>}</span>
               {(canEquip || canEdit) && (
@@ -47,7 +47,7 @@ export function InventoryManager({ characterId, items, canEdit, canUse, carryCap
           ))}
         </ul>
       )}
-      <div className="mt-2 text-xs text-[#6b5a42]">Carry capacity: {carryCapacity} lb</div>
+      <div className="mt-2 text-xs text-[#5e5448]">Carry capacity: {carryCapacity} lb</div>
       {showAdd && <AddItemModal characterId={characterId} onClose={() => { setShowAdd(false); router.refresh(); }} />}
     </div>
   );
@@ -98,8 +98,8 @@ function AddItemModal({ characterId, onClose }: { characterId: string; onClose: 
         </div>
         <div className="max-h-64 space-y-1 overflow-y-auto text-sm">
           {rows.map((r) => (
-            <div key={`${r.kind}-${r.id}`} className="flex items-center justify-between border-b border-[#e0d4b4] py-1">
-              <span>{r.name} <span className="text-xs text-[#6b5a42]">
+            <div key={`${r.kind}-${r.id}`} className="flex items-center justify-between border-b border-[#dfd5b8] py-1">
+              <span>{r.name} <span className="text-xs text-[#5e5448]">
                 {r.kind === "magic" ? `${r.rarity ?? ""}${r.requiresAttunement ? " · attune" : ""}` :
                   `${r.category ?? ""}${r.damageDice ? ` · ${r.damageDice} ${r.damageType}` : ""}${r.costGp ? ` · ${r.costGp}${r.costUnit}` : ""}`}
               </span></span>
@@ -107,7 +107,7 @@ function AddItemModal({ characterId, onClose }: { characterId: string; onClose: 
             </div>
           ))}
         </div>
-        <div className="mt-3 flex gap-1 border-t border-[#e0d4b4] pt-2">
+        <div className="mt-3 flex gap-1 border-t border-[#dfd5b8] pt-2">
           <input className="input" placeholder="Custom item (homebrew)..." value={custom} onChange={(e) => setCustom(e.target.value)} />
           <button className="btn-gold" onClick={addCustom}>Add</button>
         </div>

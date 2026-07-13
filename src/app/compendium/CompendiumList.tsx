@@ -18,14 +18,14 @@ export function CompendiumList({ rows, tab }: { rows: any[]; tab: string }) {
         {rows.map((r) => (
           <button key={`${tab}-${r.id}`} onClick={() => open(r.id)} className="card text-left hover:border-gold">
             <div className="font-display">{r.title}</div>
-            <div className="text-xs text-[#6b5a42]">{r.sub}</div>
+            <div className="text-xs text-[#5e5448]">{r.sub}</div>
           </button>
         ))}
       </div>
       {detail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setDetail(null)}>
           <div className="card max-h-[85vh] w-full max-w-2xl overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            {loading || detail.__loading ? <p className="text-[#6b5a42]">Loading...</p> : <DetailBody tab={tab} d={detail} />}
+            {loading || detail.__loading ? <p className="text-[#5e5448]">Loading...</p> : <DetailBody tab={tab} d={detail} />}
             <button className="btn-ghost mt-3" onClick={() => setDetail(null)}>Close</button>
           </div>
         </div>
@@ -41,7 +41,7 @@ function DetailBody({ tab, d }: { tab: string; d: any }) {
   if (tab === "spells") return (
     <div>
       <h2 className="font-display text-2xl text-gold">{d.name}</h2>
-      <p className="text-sm text-[#6b5a42]">{d.level === 0 ? "Cantrip" : `Level ${d.level}`} · {d.school}
+      <p className="text-sm text-[#5e5448]">{d.level === 0 ? "Cantrip" : `Level ${d.level}`} · {d.school}
         {d.concentration ? " · Concentration" : ""}{d.ritual ? " · Ritual" : ""}</p>
       <div className="mt-2 grid grid-cols-2 gap-1 text-sm">
         <div><b>Casting Time:</b> {d.castingTime}</div><div><b>Range:</b> {d.range}</div>
@@ -50,18 +50,18 @@ function DetailBody({ tab, d }: { tab: string; d: any }) {
         <div className="col-span-2"><b>Classes:</b> {J(d.classes).join(", ")}</div>
       </div>
       <p className="mt-3 whitespace-pre-wrap text-sm">{d.description}</p>
-      {d.higherLevel && <p className="mt-2 text-sm text-[#4a3a24]"><b>At Higher Levels:</b> {d.higherLevel}</p>}
+      {d.higherLevel && <p className="mt-2 text-sm text-[#3a3128]"><b>At Higher Levels:</b> {d.higherLevel}</p>}
     </div>
   );
 
   if (tab === "monsters") return (
     <div>
       <h2 className="font-display text-2xl text-gold">{d.name}</h2>
-      <p className="text-sm text-[#6b5a42]">{d.size} {d.type}{d.subtype ? ` (${d.subtype})` : ""} · {d.alignment} · CR {d.cr} ({d.xp} XP)</p>
+      <p className="text-sm text-[#5e5448]">{d.size} {d.type}{d.subtype ? ` (${d.subtype})` : ""} · {d.alignment} · CR {d.cr} ({d.xp} XP)</p>
       <div className="mt-2 flex gap-3 text-sm"><span><b>AC</b> {d.ac} {d.acType && `(${d.acType})`}</span><span><b>HP</b> {d.hp} ({d.hitDice})</span><span><b>Speed</b> {Object.values(J(d.speed)).join(", ") || d.speed}</span></div>
       <div className="mt-2 grid grid-cols-6 gap-1 text-center text-sm">
         {["str","dex","con","int","wis","cha"].map((a) => (
-          <div key={a} className="stat-box"><div className="text-[10px] uppercase text-[#6b5a42]">{a}</div><div>{d[a]}</div></div>
+          <div key={a} className="stat-box"><div className="text-[10px] uppercase text-[#5e5448]">{a}</div><div>{d[a]}</div></div>
         ))}
       </div>
       {d.senses && <p className="mt-2 text-sm"><b>Senses:</b> {d.senses}</p>}
@@ -76,7 +76,7 @@ function DetailBody({ tab, d }: { tab: string; d: any }) {
   if (tab === "equipment") return (
     <div>
       <h2 className="font-display text-2xl text-gold">{d.name}</h2>
-      <p className="text-sm text-[#6b5a42]">{d.category}{d.costGp ? ` · ${d.costGp} ${d.costUnit}` : ""}{d.weight ? ` · ${d.weight} lb` : ""}</p>
+      <p className="text-sm text-[#5e5448]">{d.category}{d.costGp ? ` · ${d.costGp} ${d.costUnit}` : ""}{d.weight ? ` · ${d.weight} lb` : ""}</p>
       {d.damageDice && <p className="mt-1 text-sm"><b>Damage:</b> {d.damageDice} {d.damageType} · {J(d.weaponProperties).join(", ")}</p>}
       {d.armorCategory && <p className="mt-1 text-sm"><b>Armor:</b> {d.armorCategory} · base AC {d.acBase}{d.strMinimum ? ` · Str ${d.strMinimum}` : ""}{d.stealthDisadvantage ? " · Stealth disadv" : ""}</p>}
       {d.description && <p className="mt-2 whitespace-pre-wrap text-sm">{d.description}</p>}
@@ -86,7 +86,7 @@ function DetailBody({ tab, d }: { tab: string; d: any }) {
   if (tab === "magic") return (
     <div>
       <h2 className="font-display text-2xl text-gold">{d.name}</h2>
-      <p className="text-sm text-[#6b5a42]">{d.rarity} · {d.type}{d.requiresAttunement ? " · requires attunement" : ""}</p>
+      <p className="text-sm text-[#5e5448]">{d.rarity} · {d.type}{d.requiresAttunement ? " · requires attunement" : ""}</p>
       <p className="mt-2 whitespace-pre-wrap text-sm">{d.description}</p>
     </div>
   );
@@ -94,7 +94,7 @@ function DetailBody({ tab, d }: { tab: string; d: any }) {
   if (tab === "races") return (
     <div>
       <h2 className="font-display text-2xl text-gold">{d.name}</h2>
-      <p className="text-sm text-[#6b5a42]">{d.size} · speed {d.speed} · {J(d.abilityBonuses).map((a: any) => `${a.ability} +${a.bonus}`).join(", ")}</p>
+      <p className="text-sm text-[#5e5448]">{d.size} · speed {d.speed} · {J(d.abilityBonuses).map((a: any) => `${a.ability} +${a.bonus}`).join(", ")}</p>
       <StatList title="Traits" arr={J(d.traits)} />
       {d.languages && <p className="text-sm"><b>Languages:</b> {d.languages}</p>}
     </div>
@@ -103,7 +103,7 @@ function DetailBody({ tab, d }: { tab: string; d: any }) {
   if (tab === "classes") return (
     <div>
       <h2 className="font-display text-2xl text-gold">{d.name}</h2>
-      <p className="text-sm text-[#6b5a42]">Hit die d{d.hitDie} · Saves {J(d.savingThrows).join(", ")}{d.spellcastingAbility ? ` · Caster (${d.spellcastingAbility})` : ""}</p>
+      <p className="text-sm text-[#5e5448]">Hit die d{d.hitDie} · Saves {J(d.savingThrows).join(", ")}{d.spellcastingAbility ? ` · Caster (${d.spellcastingAbility})` : ""}</p>
       <StatList title="Features" arr={J(d.features).map((f: any) => ({ name: `L${f.level} · ${f.name}`, description: f.description }))} />
     </div>
   );

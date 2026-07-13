@@ -112,7 +112,7 @@ export function LevelUpWizard({ characterId, classes, abilities, onClose }: {
 
         {className && (
           <>
-            <div className="mb-3 text-sm text-[#6b5a42]">Target: {className} level {targetLevel} · Hit die d{die}</div>
+            <div className="mb-3 text-sm text-[#5e5448]">Target: {className} level {targetLevel} · Hit die d{die}</div>
 
             {/* HP */}
             <label className="label">Hit Points gained</label>
@@ -126,7 +126,7 @@ export function LevelUpWizard({ characterId, classes, abilities, onClose }: {
                   {hpRoll != null && <span className="chip text-gold">Rolled: {hpRoll}</span>}
                 </>
               )}
-              <span className="text-xs text-[#6b5a42]">(+ CON modifier)</span>
+              <span className="text-xs text-[#5e5448]">(+ CON modifier)</span>
             </div>
 
             {/* Subclass */}
@@ -146,7 +146,7 @@ export function LevelUpWizard({ characterId, classes, abilities, onClose }: {
 
             {/* ASI / Feat */}
             {isAsiLevel && (
-              <div className="mb-3 rounded border border-[#cdb98c] p-2">
+              <div className="mb-3 rounded border border-[#cdbf9f] p-2">
                 <div className="mb-2 flex gap-2">
                   <span className="text-sm text-gold">Ability Score Improvement</span>
                   <button className={asiMode === "asi" ? "btn-gold !py-0.5" : "btn-ghost !py-0.5"} onClick={() => setAsiMode("asi")}>+2 Abilities</button>
@@ -155,11 +155,11 @@ export function LevelUpWizard({ characterId, classes, abilities, onClose }: {
                 </div>
                 {asiMode === "asi" && (
                   <div>
-                    <div className="mb-1 text-xs text-[#6b5a42]">Distribute 2 points ({asiPoints}/2 used), max 20 each</div>
+                    <div className="mb-1 text-xs text-[#5e5448]">Distribute 2 points ({asiPoints}/2 used), max 20 each</div>
                     <div className="grid grid-cols-3 gap-1">
                       {ABILITIES.map((a) => (
                         <div key={a} className="stat-box">
-                          <div className="text-[10px] uppercase text-[#6b5a42]">{ABILITY_LABELS[a]}</div>
+                          <div className="text-[10px] uppercase text-[#5e5448]">{ABILITY_LABELS[a]}</div>
                           <div className="flex items-center gap-1">
                             <button className="chip" onClick={() => bumpAsi(a, -1)}>−</button>
                             <span>{abilities[a] + (asi[a] ?? 0)}</span>

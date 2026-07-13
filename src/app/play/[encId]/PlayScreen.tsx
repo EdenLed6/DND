@@ -46,7 +46,7 @@ export function PlayScreen({ encId, campaignId, initialState, campaignChars, map
       <div className="card flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="font-display text-xl text-gold">⚔ {state?.name}</h1>
-          <div className="text-sm text-[#6b5a42]">
+          <div className="text-sm text-[#5e5448]">
             Status: {state?.status} {state?.status === "ACTIVE" && `· Round ${state.round}`}
           </div>
         </div>
@@ -160,7 +160,7 @@ function MapBoard({ state, isDM, myCharacterIds, onMove, onSetMap, maps, campaig
       {isDM && <MapControls maps={maps} campaignId={campaignId} onSetMap={onSetMap} onMapsChanged={onMapsChanged} current={map?.id} />}
       {isDM && map && (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-[#6b5a42]">Fog of War:</span>
+          <span className="text-[#5e5448]">Fog of War:</span>
           <button className={fogEnabled ? "btn-gold !py-0.5" : "btn-ghost !py-0.5"} onClick={() => fogOp({ op: "setFog", enabled: !fogEnabled })}>{fogEnabled ? "On" : "Off"}</button>
           <button className={brush === "reveal" ? "btn-gold !py-0.5" : "btn-ghost !py-0.5"} onClick={() => setBrush(brush === "reveal" ? "off" : "reveal")}>🖌 Reveal</button>
           <button className={brush === "hide" ? "btn-gold !py-0.5" : "btn-ghost !py-0.5"} onClick={() => setBrush(brush === "hide" ? "off" : "hide")}>🌫 Hide</button>
@@ -169,7 +169,7 @@ function MapBoard({ state, isDM, myCharacterIds, onMove, onSetMap, maps, campaig
         </div>
       )}
       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-        <span className="text-[#6b5a42]">Tools:</span>
+        <span className="text-[#5e5448]">Tools:</span>
         <button className={tool === "ruler" ? "btn-gold !py-0.5" : "btn-ghost !py-0.5"} onClick={() => { setTool(tool === "ruler" ? "off" : "ruler"); setRuler(null); }}>📏 Ruler</button>
         <button className={tool === "aoe" ? "btn-gold !py-0.5" : "btn-ghost !py-0.5"} onClick={() => { setTool(tool === "aoe" ? "off" : "aoe"); setAoeAnchor(null); }}>🔥 AoE</button>
         {tool === "aoe" && (
@@ -181,13 +181,13 @@ function MapBoard({ state, isDM, myCharacterIds, onMove, onSetMap, maps, campaig
               <option value="line">Line</option>
             </select>
             <input className="input !w-16 !py-0.5" type="number" step={5} min={5} value={aoeSize} onChange={(e) => setAoeSize(+e.target.value)} title="Size (ft)" />
-            <span className="text-[#6b5a42]">ft</span>
+            <span className="text-[#5e5448]">ft</span>
             {aoeAnchor && <button className="btn-ghost !py-0.5" onClick={() => setAoeAnchor(null)}>Clear</button>}
           </>
         )}
         {tool === "ruler" && ruler && <span className="chip text-gold">{distFt} ft</span>}
       </div>
-      <div className="mt-2 text-xs text-[#6b5a42]">Scale: {gridSize}px = 5ft · {cols}×{rows} squares{brush !== "off" ? " · brush mode active (drag over the map)" : ""}</div>
+      <div className="mt-2 text-xs text-[#5e5448]">Scale: {gridSize}px = 5ft · {cols}×{rows} squares{brush !== "off" ? " · brush mode active (drag over the map)" : ""}</div>
       <DndContext sensors={sensors} modifiers={[restrictToParentElement]} onDragEnd={onDragEnd}>
         <div className="relative mt-2 select-none" style={{ width: cols * gridSize, height: rows * gridSize,
           backgroundImage: map?.imageUrl ? `url(${map.imageUrl})` : undefined,
@@ -287,7 +287,7 @@ function TokenView({ token, combatant, gridSize, draggable, dm }: any) {
       </div>
       {combatant && (
         <div className="absolute -bottom-1 left-0 h-1 w-full rounded bg-black/50">
-          <div className="h-1 rounded" style={{ width: `${hpPct}%`, background: hpPct > 50 ? "#3aa655" : hpPct > 25 ? "#a07908" : "#c0392b" }} />
+          <div className="h-1 rounded" style={{ width: `${hpPct}%`, background: hpPct > 50 ? "#3aa655" : hpPct > 25 ? "#b98338" : "#c0392b" }} />
         </div>
       )}
     </div>
@@ -357,7 +357,7 @@ function MapLibraryModal({ onPick, onClose }: { onPick: (id: string) => void; on
         </div>
         {cats.map((cat) => (
           <div key={cat} className="mb-3">
-            <div className="mb-1 text-xs uppercase text-[#6b5a42]">{presets.find((p) => p.category === cat)?.icon} {cat}</div>
+            <div className="mb-1 text-xs uppercase text-[#5e5448]">{presets.find((p) => p.category === cat)?.icon} {cat}</div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {presets.filter((p) => p.category === cat).map((p) => (
                 <button key={p.id} className="btn-ghost justify-start !py-1 text-xs" onClick={() => onPick(p.id)}>
@@ -382,7 +382,7 @@ function InitiativeTracker({ combatants, activeId, isDM, onUpdate }: any) {
           const conditions = safeArr(c.conditions);
           const active = c.id === activeId;
           return (
-            <div key={c.id} className={`rounded border p-2 text-sm ${active ? "border-gold bg-[#e0d4b4]" : "border-[#e0d4b4]"} ${!c.isVisible ? "opacity-60" : ""}`}>
+            <div key={c.id} className={`rounded border p-2 text-sm ${active ? "border-gold bg-[#dfd5b8]" : "border-[#dfd5b8]"} ${!c.isVisible ? "opacity-60" : ""}`}>
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1">
                   <b className="w-6 text-center text-gold">{c.initiative}</b>
@@ -391,7 +391,7 @@ function InitiativeTracker({ combatants, activeId, isDM, onUpdate }: any) {
                 </span>
                 <span className={c.currentHp === 0 ? "text-red-700" : ""}>{c.currentHp}/{c.maxHp}</span>
               </div>
-              {conditions.length > 0 && <div className="mt-1 text-xs text-[#a07908]">{conditions.join(", ")}</div>}
+              {conditions.length > 0 && <div className="mt-1 text-xs text-[#b98338]">{conditions.join(", ")}</div>}
               {isDM && (
                 <div className="mt-1 flex flex-wrap items-center gap-1 text-xs">
                   <button className="btn-ghost !px-1.5 !py-0" onClick={() => onUpdate({ op: "updateCombatant", combatantId: c.id, patch: { currentHp: Math.max(0, c.currentHp - 5) } })}>−5</button>
@@ -411,7 +411,7 @@ function InitiativeTracker({ combatants, activeId, isDM, onUpdate }: any) {
             </div>
           );
         })}
-        {combatants.length === 0 && <p className="text-sm text-[#6b5a42]">No combatants. Add some in Build Encounter.</p>}
+        {combatants.length === 0 && <p className="text-sm text-[#5e5448]">No combatants. Add some in Build Encounter.</p>}
       </div>
     </div>
   );
@@ -424,11 +424,11 @@ function CombatLog({ log }: any) {
       <h3 className="mb-2 font-display text-gold">Combat Log</h3>
       <div className="max-h-64 space-y-1 overflow-y-auto text-xs">
         {log.map((l: any) => (
-          <div key={l.id} className="border-b border-[#e0d4b4] pb-1">
-            <span className="text-[#6b5a42]">{l.actor}: </span>{l.message}
+          <div key={l.id} className="border-b border-[#dfd5b8] pb-1">
+            <span className="text-[#5e5448]">{l.actor}: </span>{l.message}
           </div>
         ))}
-        {log.length === 0 && <p className="text-[#6b5a42]">—</p>}
+        {log.length === 0 && <p className="text-[#5e5448]">—</p>}
       </div>
     </div>
   );
@@ -455,7 +455,7 @@ function Builder({ op, campaignChars, combatants }: any) {
             <button key={c.id} disabled={existingCharIds.has(c.id)} className={existingCharIds.has(c.id) ? "chip opacity-40" : "btn-ghost"}
               onClick={() => op({ op: "addPlayers", characterIds: [c.id] })}>{c.name}</button>
           ))}
-          {campaignChars.length === 0 && <span className="text-sm text-[#6b5a42]">No characters in this campaign.</span>}
+          {campaignChars.length === 0 && <span className="text-sm text-[#5e5448]">No characters in this campaign.</span>}
         </div>
       </div>
       <div>
@@ -468,8 +468,8 @@ function Builder({ op, campaignChars, combatants }: any) {
         </div>
         <div className="max-h-48 space-y-1 overflow-y-auto text-sm">
           {results.map((m: any) => (
-            <div key={m.id} className="flex items-center justify-between border-b border-[#e0d4b4] py-1">
-              <span>{m.name} <span className="text-xs text-[#6b5a42]">CR {m.cr} · HP {m.hp} · AC {m.ac}</span></span>
+            <div key={m.id} className="flex items-center justify-between border-b border-[#dfd5b8] py-1">
+              <span>{m.name} <span className="text-xs text-[#5e5448]">CR {m.cr} · HP {m.hp} · AC {m.ac}</span></span>
               <button className="btn-ghost !py-0.5" onClick={() => op({ op: "addMonster", monsterId: m.id, count, rollHp })}>+ Add</button>
             </div>
           ))}
@@ -500,7 +500,7 @@ function AttackPanel({ op, combatants }: any) {
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-[#6b5a42]">Choose an attacker, an action, and targets (one or many players) — the system rolls the attack against each target's AC.</p>
+      <p className="text-sm text-[#5e5448]">Choose an attacker, an action, and targets (one or many players) — the system rolls the attack against each target's AC.</p>
       <div className="grid gap-2 md:grid-cols-3">
         <div>
           <label className="label">Attacker</label>
@@ -536,7 +536,7 @@ function AttackPanel({ op, combatants }: any) {
       </div>
       <button className="btn-primary" disabled={!attackerId || targets.length === 0} onClick={doAttack}>🎲 Roll Attack</button>
       {result?.outcomes && (
-        <div className="rounded border border-[#cdb98c] p-2 text-sm">
+        <div className="rounded border border-[#cdbf9f] p-2 text-sm">
           <b className="text-gold">{result.action}</b>
           {result.outcomes.map((o: any, i: number) => (
             <div key={i} className={o.hit ? "text-green-900" : "text-red-900"}>{o.message}</div>

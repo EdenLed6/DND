@@ -26,8 +26,8 @@ export function VerifyBanner({ verified }: { verified: boolean }) {
     : null;
 
   return (
-    <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#cdb98c] bg-[#f8efd6] px-4 py-2 text-sm">
-      <span className="text-[#a07908]">
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#cdbf9f] bg-[#f8efd6] px-4 py-2 text-sm">
+      <span className="text-[#b98338]">
         ✉️ Please verify your email address to secure your account.
         {status === "sent" && <span className="ml-2 text-green-900">Verification email sent!</span>}
         {status === "error" && <span className="ml-2 text-red-900">Couldn't send — try again later.</span>}

@@ -14,7 +14,7 @@ export function TopNav({ user }: { user: { displayName: string } }) {
   return (
     <>
       {/* Top bar */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[#cdb98c] bg-[#faf4e3]/95 px-4 py-3 backdrop-blur"
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[#cdbf9f] bg-[#fbf7ea]/95 px-4 py-3 backdrop-blur"
         style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}>
         <Link href="/dashboard" className="flex items-center gap-2 font-display text-lg text-gold">
           🐉 <span className="hidden sm:inline">Campaign Manager</span>

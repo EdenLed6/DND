@@ -38,7 +38,7 @@ export function RestPanel({
       <div className="mt-3">
         <div className="mb-1 flex items-center justify-between text-sm">
           <span className="text-xs uppercase tracking-wide text-gold">Spend Hit Die</span>
-          <span className="text-xs text-[#6b5a42]">{remaining}/{totalHitDice} remaining</span>
+          <span className="text-xs text-[#5e5448]">{remaining}/{totalHitDice} remaining</span>
         </div>
         <div className="flex flex-wrap gap-2">
           {hitDice.map((hd) => (
