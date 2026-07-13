@@ -1,0 +1,90 @@
+{
+  "color": {
+    "canvas": "#F3ECD9",
+    "paper": "#FBF7EA",
+    "paperDeep": "#E9DFC5",
+    "paperWarm": "#F5E9D4",
+    "ink": "#2B241D",
+    "inkSoft": "#5E5448",
+    "wine": "#7A2B2F",
+    "wineDark": "#552025",
+    "gold": "#B58A42",
+    "goldSoft": "#D7C08A",
+    "sage": "#8C9877",
+    "mistBlue": "#8DA7B4",
+    "rust": "#A85D3B",
+    "success": "#6F8A5B",
+    "warning": "#B98338",
+    "danger": "#A33F3F",
+    "magic": "#6E5B9B",
+    "line": "#CDBF9F",
+    "lineStrong": "#A38C62"
+  },
+  "space": {
+    "1": 4,
+    "2": 8,
+    "3": 12,
+    "4": 16,
+    "5": 20,
+    "6": 24,
+    "8": 32,
+    "10": 40,
+    "12": 48
+  },
+  "radius": {
+    "sm": 8,
+    "md": 12,
+    "lg": 18,
+    "xl": 24,
+    "pill": 999
+  },
+  "shadow": {
+    "soft": "0 8px 24px rgba(62, 43, 23, 0.08)",
+    "floating": "0 16px 40px rgba(62, 43, 23, 0.18)"
+  },
+  "type": {
+    "display": "Cinzel",
+    "body": "Crimson Pro",
+    "ui": "Inter"
+  },
+  "condition": {
+    "poisoned": {
+      "color": "#6F8A5B",
+      "icon": "skull",
+      "automation": [
+        "attack-disadvantage",
+        "ability-check-disadvantage"
+      ]
+    },
+    "bleeding": {
+      "color": "#A33F3F",
+      "icon": "blood",
+      "supportsStacks": true,
+      "automation": [
+        "start-turn-damage"
+      ]
+    },
+    "exhaustion": {
+      "color": "#B98338",
+      "icon": "fatigue",
+      "levels": 6,
+      "automation": [
+        "rule-version-dependent"
+      ]
+    },
+    "burning": {
+      "color": "#A85D3B",
+      "icon": "flame",
+      "automation": [
+        "start-turn-fire-damage"
+      ]
+    },
+    "concentrating": {
+      "color": "#6E5B9B",
+      "icon": "focus",
+      "automation": [
+        "damage-save-prompt"
+      ]
+    }
+  }
+}

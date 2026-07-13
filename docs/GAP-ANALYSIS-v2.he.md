@@ -1,6 +1,10 @@
 # ניתוח פערים — מהמצב הקיים לאפיון v2
 
 > יולי 2026 · משווה את מה שממומש היום (לפי `SPEC.he.md` v1) מול האפיון החדש (`SPEC-v2.he.md`, `SPEC-PLAYER.he.md`, `SPEC-DM.he.md`), ומגדיר תוכנית מימוש בשלבים.
+>
+> **מערכת עיצוב מחייבת:** `docs/design-system/` — "Wayward Realms" v1.1 (index.html חי + design-tokens.json). כל רכיב חדש מיושר לדפוסים שם: כפתור ראשי wine מלא / משני מתאר זהב, לוחיות מגן ל-AC/יוזמה/HP, section-bar, roll-chips, stat-blocks לבסטיארי, קוביות אובסידיאן עם ספרות אדומות, radius 8/12/18, shadow soft/float.
+>
+> **סקופ נוסף מה-DS:** רכיב Conditions & Ongoing Effects מלא (`docs/design-system/CONDITIONS-COMPONENT.he.md`) — מצבים עם משך/הצלה/stacks/נראות/אוטומציית תורים + Undo. משתלב בשלבים 3–4 (דורש מודל נתונים חדש CharacterCondition + אוטומציה בקרב).
 
 ---
 
