@@ -5,6 +5,7 @@ import { requireUser, bad } from "@/lib/api";
 import { isDM } from "@/lib/auth/rbac";
 import { levelForXp } from "@/lib/dnd/rules";
 import { emitToCampaign } from "@/lib/realtime/io";
+import { logAudit } from "@/lib/audit";
 
 const schema = z.object({
   amount: z.number().int(),
@@ -31,5 +32,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     results.push({ characterId: ch.id, xp: newXp, level: levelForXp(newXp), canLevelUp });
     emitToCampaign(campaignId, "xp:awarded", { characterId: ch.id, xp: newXp, level: levelForXp(newXp), canLevelUp });
   }
+  await logAudit(campaignId, user.id, "xp.award", `${parsed.data.amount >= 0 ? "+" : ""}${parsed.data.amount} XP to ${chars.length} character(s)`);
   return NextResponse.json({ results });
 }

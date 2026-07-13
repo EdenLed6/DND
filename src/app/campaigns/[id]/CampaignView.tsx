@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { fromCopper } from "@/lib/dnd/rules";
 import { computeEncounterDifficulty } from "@/lib/dnd/encounter-math";
 import { useRealtime } from "@/lib/realtime/useRealtime";
+import { SessionsTab } from "./SessionsTab";
+import { WorldTab } from "./WorldTab";
+import { DmNotesTab } from "./DmNotesTab";
+import { PartyLootTab } from "./PartyLootTab";
 
 type Party = {
   id: string; name: string; owner: string; ownerId: string; race: string; classes: string;
@@ -17,7 +21,8 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
   isDM: boolean; me: { id: string; name: string };
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"party" | "progress" | "loot" | "rest" | "play">("party");
+  const [tab, setTab] = useState<"party" | "progress" | "sessions" | "world" | "loot" | "notes" | "rest" | "play">("party");
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [sel, setSel] = useState<string[]>([]);
   const [xpAmt, setXpAmt] = useState("");
   const [goldGp, setGoldGp] = useState("");
@@ -48,8 +53,11 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
   }
 
   const TABS: [typeof tab, string][] = [
-    ["party", "🎭 Party"], ["progress", "⬆ Progression"], ["loot", "💰 Loot & Gold"], ["rest", "🛏 Rest"], ["play", "⚔ Combat & Maps"],
+    ["party", "🎭 Party"], ["progress", "⬆ Progression"], ["sessions", "📜 Sessions"], ["world", "🗺 World"],
+    ["loot", "💰 Loot & Gold"], ["notes", "🕮 Notes"], ["rest", "🛏 Rest"], ["play", "⚔ Combat & Maps"],
   ];
+
+  const myCharacters = party.filter((p) => p.ownerId === me.id).map((p) => ({ id: p.id, name: p.name }));
 
   return (
     <main className="mx-auto max-w-6xl space-y-4 p-4">
@@ -61,7 +69,10 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
         <div className="text-right text-sm">
           <div>Invite Code: <code className="text-gold">{campaign.inviteCode}</code></div>
           <div className="text-[#5e5448]">{members.length} members · {party.length} characters</div>
-          {isDM ? <span className="chip mt-1">👑 DM</span> : <span className="chip mt-1">Player</span>}
+          <div className="mt-1 flex items-center justify-end gap-2">
+            {isDM ? <span className="chip">👑 DM</span> : <span className="chip">Player</span>}
+            {isDM && <button className="btn-ghost !px-2 !py-0.5" title="Campaign Settings" onClick={() => setSettingsOpen(true)}>⚙ Settings</button>}
+          </div>
         </div>
       </div>
 
@@ -158,8 +169,18 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
         </div>
       )}
 
+      {/* SESSIONS */}
+      {tab === "sessions" && <SessionsTab campaignId={campaign.id} isDM={isDM} />}
+
+      {/* WORLD (NPCs & Quests) */}
+      {tab === "world" && <WorldTab campaignId={campaign.id} isDM={isDM} />}
+
+      {/* NOTES */}
+      {tab === "notes" && <DmNotesTab campaignId={campaign.id} isDM={isDM} />}
+
       {/* LOOT & GOLD */}
       {tab === "loot" && (
+        <>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="card space-y-3">
             <h3 className="font-display text-gold">Party Gold</h3>
@@ -212,6 +233,8 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
             )}
           </div>
         </div>
+        <PartyLootTab campaignId={campaign.id} isDM={isDM} myCharacters={myCharacters} />
+        </>
       )}
 
       {/* REST (DM) */}
@@ -235,7 +258,101 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
       {tab === "play" && (
         <PlayTab campaign={campaign} encounters={encounters} maps={maps} party={party} isDM={isDM} onChange={() => router.refresh()} />
       )}
+
+      {isDM && settingsOpen && (
+        <SettingsModal campaignId={campaign.id} onClose={() => { setSettingsOpen(false); router.refresh(); }} />
+      )}
     </main>
+  );
+}
+
+type Settings = {
+  xpMode: "xp" | "milestone";
+  enemyHpVisible: boolean;
+  diceVisibilityDefault: "public" | "dm";
+  critRule: "standard" | "double-total";
+  restVariant: "standard" | "gritty";
+  joinApproval: boolean;
+};
+
+function SettingsModal({ campaignId, onClose }: { campaignId: string; onClose: () => void }) {
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/campaigns/${campaignId}/settings`)
+      .then((r) => r.json())
+      .then((d) => setSettings(d.settings))
+      .catch(() => setSettings(null));
+  }, [campaignId]);
+
+  async function save() {
+    if (!settings || saving) return;
+    setSaving(true);
+    try {
+      await fetch(`/api/campaigns/${campaignId}/settings`, {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(settings),
+      });
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const set = <K extends keyof Settings>(k: K, v: Settings[K]) => setSettings((s) => (s ? { ...s, [k]: v } : s));
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="modal card space-y-3" onClick={(e) => e.stopPropagation()}>
+        <h3 className="font-display text-gold">⚙ Campaign Settings</h3>
+        {!settings ? <p className="muted text-sm">Loading…</p> : (
+          <>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="label">Advancement</label>
+                <select className="input" value={settings.xpMode} onChange={(e) => set("xpMode", e.target.value as Settings["xpMode"])}>
+                  <option value="xp">XP</option>
+                  <option value="milestone">Milestone</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Default Dice Visibility</label>
+                <select className="input" value={settings.diceVisibilityDefault} onChange={(e) => set("diceVisibilityDefault", e.target.value as Settings["diceVisibilityDefault"])}>
+                  <option value="public">Public</option>
+                  <option value="dm">DM only</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Critical Hit Rule</label>
+                <select className="input" value={settings.critRule} onChange={(e) => set("critRule", e.target.value as Settings["critRule"])}>
+                  <option value="standard">Standard (double dice)</option>
+                  <option value="double-total">Double total</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Rest Variant</label>
+                <select className="input" value={settings.restVariant} onChange={(e) => set("restVariant", e.target.value as Settings["restVariant"])}>
+                  <option value="standard">Standard</option>
+                  <option value="gritty">Gritty Realism</option>
+                </select>
+              </div>
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" className="h-4 w-4" checked={settings.enemyHpVisible} onChange={(e) => set("enemyHpVisible", e.target.checked)} />
+              Show enemy HP to players
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" className="h-4 w-4" checked={settings.joinApproval} onChange={(e) => set("joinApproval", e.target.checked)} />
+              Require DM approval for new members
+            </label>
+            <div className="flex justify-end gap-2 border-t border-[#dfd5b8] pt-3">
+              <button className="btn-ghost" onClick={onClose}>Cancel</button>
+              <button className="btn-primary" disabled={saving} onClick={save}>{saving ? "Saving…" : "Save Settings"}</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 

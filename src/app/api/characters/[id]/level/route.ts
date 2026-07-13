@@ -5,6 +5,7 @@ import { requireUser, bad } from "@/lib/api";
 import { canEditCharacter } from "@/lib/auth/rbac";
 import { loadCharacterView } from "@/lib/character-view";
 import { emitToCampaign } from "@/lib/realtime/io";
+import { logAudit } from "@/lib/audit";
 
 const schema = z.object({
   classId: z.string().optional(),          // which class to level (default primary)
@@ -41,6 +42,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     emitToCampaign(before.character.campaignId, "character:updated", {
       characterId: id, patch: { level: newLevel, maxHp: hpAfter, currentHp: newCurrent }, by: user.id,
     });
+    await logAudit(before.character.campaignId, user.id, "level.set", `${before.character.name}: ${cls.classId} → level ${newLevel}`);
   }
   return NextResponse.json({ className: cls.classId, level: newLevel, maxHp: hpAfter, currentHp: newCurrent });
 }

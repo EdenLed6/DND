@@ -6,6 +6,7 @@ import { isDM } from "@/lib/auth/rbac";
 import { loadCharacterView } from "@/lib/character-view";
 import { computeRest } from "@/lib/dnd/rest";
 import { emitToCampaign } from "@/lib/realtime/io";
+import { logAudit } from "@/lib/audit";
 
 const schema = z.object({
   type: z.enum(["SHORT", "LONG"]),
@@ -37,5 +38,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     emitToCampaign(campaignId, "character:updated", { characterId: id, patch, by: user.id });
   }
   emitToCampaign(campaignId, "rest:applied", { type: parsed.data.type, count: chars.length });
+  await logAudit(campaignId, user.id, "rest.apply", `${parsed.data.type} rest for ${chars.length} character(s)`);
   return NextResponse.json({ ok: true, count: chars.length });
 }

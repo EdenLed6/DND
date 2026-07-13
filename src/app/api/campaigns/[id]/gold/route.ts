@@ -5,6 +5,7 @@ import { requireUser, bad } from "@/lib/api";
 import { isDM } from "@/lib/auth/rbac";
 import { toCopper, fromCopper } from "@/lib/dnd/rules";
 import { emitToCampaign } from "@/lib/realtime/io";
+import { logAudit } from "@/lib/audit";
 
 const schema = z.object({
   target: z.enum(["party", "character"]),
@@ -28,6 +29,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const next = Math.max(0, c.partyGoldCp + d.deltaCp);
     await prisma.campaign.update({ where: { id: campaignId }, data: { partyGoldCp: next } });
     emitToCampaign(campaignId, "gold:changed", { scope: "party", partyGoldCp: next });
+    await logAudit(campaignId, user.id, "gold.party", `${d.deltaCp >= 0 ? "+" : ""}${d.deltaCp}cp (party purse)`);
     return NextResponse.json({ partyGoldCp: next });
   }
 
@@ -46,5 +48,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     emitToCampaign(campaignId, "gold:changed", { scope: "party", partyGoldCp });
   }
   emitToCampaign(campaignId, "character:updated", { characterId: ch.id, patch: purse, by: user.id });
+  await logAudit(campaignId, user.id, "gold.character", `${d.deltaCp >= 0 ? "+" : ""}${d.deltaCp}cp to ${ch.name}${d.fromParty ? " (from party purse)" : ""}`);
   return NextResponse.json({ purse, partyGoldCp });
 }
