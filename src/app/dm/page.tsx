@@ -41,7 +41,7 @@ export default async function DmHome() {
               <Link key={c.id} href={`/campaigns/${c.id}`} className="truncate rounded-lg px-3 py-2 text-[#DCCFBE] hover:bg-[#B58A42]/15 hover:text-white">{c.name}</Link>
             ))}
             <span className="px-2 pt-3 text-[9px] uppercase tracking-[.13em] text-[#A99782]">Library</span>
-            <Link href="/compendium" className="rounded-lg px-3 py-2 text-[#DCCFBE] hover:bg-[#B58A42]/15 hover:text-white">Enemies &amp; Rules</Link>
+            <Link href="/enemies" className="rounded-lg px-3 py-2 text-[#DCCFBE] hover:bg-[#B58A42]/15 hover:text-white">Enemies &amp; Rules</Link>
             <Link href="/dashboard" className="rounded-lg px-3 py-2 text-[#DCCFBE] hover:bg-[#B58A42]/15 hover:text-white">My Characters</Link>
             <Link href="/portal?choose=1" className="rounded-lg px-3 py-2 text-[#DCCFBE] hover:bg-[#B58A42]/15 hover:text-white">Switch Portal</Link>
           </nav>
