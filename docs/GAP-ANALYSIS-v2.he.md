@@ -21,13 +21,17 @@
 
 ## 2. פערים מרכזיים מול v2
 
-### 2.1 שפה עיצובית (v2 §4) — היפוך כיוון
+### 2.1 שפה עיצובית (v2.2 §4 — Light Fantasy Rulebook) — יישור, לא היפוך
 
-| v2 דורש | קיים היום |
-|---|---|
-| Dark Fantasy Product UI: בסיס כמעט שחור `#0B1115`, משטחי slate, crimson `#D20A16`, arcane blue `#2299E8`, Inter/system UI, Cinzel רק בכותרות נבחרות | עיצוב "ספר קלף" בהיר (פרלמנט, קרם, maroon/זהב) |
+v2.2 קובעת **Visual Direction Override: הממשק הראשי בהיר** — בדיוק הכיוון שכבר ממומש. הפער הוא יישור עדין:
 
-כל הצבעים היום מרוכזים בטוקנים ב-`globals.css` + Tailwind — ההחלפה זולה יחסית. נדרש מיפוי טוקנים חדש + מעבר על ~24 קבצים עם ערכים קשיחים (כבר ממופים מהמעבר הקודם).
+| v2.2 דורש | קיים היום | פעולה |
+|---|---|---|
+| טוקנים מחייבים: canvas `#F3ECD9`, paper `#FBF7EA`, wine `#7A2B2F`, gold `#B58A42`, sage, mist-blue, rust, magic | קלף `#eee5ce`, קרם `#faf4e3`, maroon `#58180d`, זהב `#b28d4e` | עדכון ערכי הטוקנים המרכזיים + הוספת סמנטיים (sage/mist-blue/rust/magic/success/warning/danger) |
+| גוף טקסט serif (Crimson Pro), UI/כפתורים Inter, כותרות Cinzel | גוף Alegreya Sans, כותרות Cinzel | החלפת פונט גוף ל-Crimson Pro + Inter לרכיבי UI |
+| שימוש סמנטי בצבע: wine לכותרות/פעולות, sage לריפוי, mist-blue לקסם/מידע, rust למפלצות/סכנה | חלקי (maroon/זהב בלבד) | הרחבת השימוש הסמנטי |
+| איורים: header דמות, עמודי מפלצות (bestiary), watercolor washes, ink sketches | אין איורים | שכבת איור — בשלבים 3–4 |
+| §20 Player Handbook Experience + §19 DM Grimoire (stat-block styling, plaques, seals, ledger) | סגנון כרטיסים אחיד | מיושם יחד עם שלדי הפורטלים |
 
 ### 2.2 מבנה המוצר (v2 §2) — שני פורטלים
 

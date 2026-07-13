@@ -1,4 +1,5 @@
 # אפיון מפורט — Player Portal
+> **Visual Direction Override:** הממשק הראשי בהיר. אין להשתמש ב־dark UI כברירת מחדל. הכיוון המחייב הוא Light Fantasy Rulebook.
 
 > גרסה 2.0 · יולי 2026  
 > מטרה: חוויית שחקן מלאה, עשירה ומהירה ברמת D&D Beyond, אך עם שפה עיצובית מקורית.
@@ -1061,3 +1062,102 @@ Roll Card כולל:
 - תוצאה מתפרסמת realtime לפי visibility.
 - Reduced motion נתמך.
 - fallback ללא WebGL נתמך.
+
+
+---
+
+## 20. מערכת עיצוב לשחקן — Player Handbook Experience
+
+### Character Header
+
+- רקע parchment עמוק יותר.
+- portrait ממוסגר כמו miniature card.
+- AC, Initiative ו־HP יוצגו בתוך shields / plaques מאוירים.
+- inspiration יוצג כ־sigil או crest.
+- conditions יוצגו כ־ribbon או pills עם אייקונים.
+- header יכול להתכווץ בזמן גלילה, אך שומר HP, AC, Initiative ו־Dice.
+
+### Section Screens
+
+כל section יתנהג כמו "עמוד בספר":
+
+- כותרת section גדולה.
+- אייקון מאויר.
+- divider דקורטיבי.
+- grid/list toggle.
+- background art עדין.
+- תוכן צפוף אך מסודר.
+- sticky section bar.
+
+### Abilities, Saves & Senses
+
+- ability blocks בסגנון stat block מודפס.
+- מסגרות דקות, לא cards עבים.
+- modifier גדול, score קטן.
+- saving throws כ־ornamental rows.
+- senses באזור side panel עם parchment tint.
+
+### Skills
+
+- table בהירה עם קווי הפרדה.
+- proficiency marker מאויר.
+- bonus בתוך framed capsule.
+- pin כ־quill marker.
+- hover/focus בגוון gold wash.
+
+### Actions
+
+- חלוקה ברורה ל־Actions, Bonus Actions, Reactions.
+- attacks מוצגים כמו weapon rows.
+- damage dice מודגש.
+- rule text serif.
+- limited resources כ־small tracking boxes.
+- action icons בסגנון ink illustration.
+
+### Spells
+
+- spell levels כפרקים.
+- slot trackers כ־small square seals.
+- spell school glyph.
+- spell row בהיר, עם columns:
+  - Time
+  - Range
+  - Hit/DC
+  - Effect
+- Manage Spells ירגיש כמו spellbook index.
+- known/prepared states יוצגו כ־bookmarks / seals.
+
+### Inventory
+
+- parchment inventory ledger.
+- headers מודגשים.
+- equipped items בירוק־מרווה.
+- magic items בגוון סגול־מעושן.
+- item art אופציונלי בצד.
+- weight/currency על watercolor banner.
+
+### Background
+
+- שתי עמודות בדסקטופ:
+  - illustration/lore.
+  - characteristics/rules.
+- מובייל: איור בראש, תוכן מתחת.
+- quotes, bonds, flaws ו־ideals כ־callouts.
+
+### Character Management
+
+- character builder כ־wizard בהיר.
+- step navigation כמו chapter tabs.
+- summary preview כמו character folio.
+- בחירות קריטיות מקבלות decorative confirmation panel.
+
+### Dice Overlay
+
+הקוביות יכולות להיות כהות/מתכתיות גם בתוך ממשק בהיר, כדי לבלוט מעל הקלף:
+
+- overlay שקוף.
+- הצללה רכה מתחת לקוביות.
+- תוצאות כ־parchment glass cards.
+- nat 20 מקבל gold flare.
+- nat 1 מקבל crimson crack effect.
+- אין להכהות את כל המסך בזמן גלגול.

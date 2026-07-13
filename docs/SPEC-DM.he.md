@@ -1,4 +1,5 @@
 # אפיון מפורט — Dungeon Master Portal
+> **Visual Direction Override:** הממשק הראשי בהיר. אין להשתמש ב־dark UI כברירת מחדל. הכיוון המחייב הוא Light Fantasy Rulebook.
 
 > גרסה 2.0 · יולי 2026  
 > מטרה: מערכת ניהול מלאה לשה"מ, משלב תכנון הקמפיין ועד ניהול קרב חי.
@@ -713,3 +714,96 @@ Mobile DM:
 - party actions פועלות על בחירה מרובה.
 - session prep ו־live session נפרדים.
 - כל מסך DM עובד בדסקטופ, וכל פעולת ליבה זמינה גם בנייד.
+
+---
+
+## 19. מערכת עיצוב לשה״מ — Dungeon Master Grimoire
+
+### Campaign Dashboard
+
+- מרגיש כמו campaign journal פתוח.
+- cover art גדול.
+- chapter markers.
+- session recap כמו handwritten marginalia.
+- widgets משולבים במשטח, לא cards גנריים.
+- parchment panels עם borders דקים.
+
+### Party Management
+
+- party table בהירה.
+- portrait medallions.
+- HP bars דקות.
+- conditions כ־colored seals.
+- selected character נפתח כ־folio side panel.
+
+### Encounter Builder
+
+- layout כמו tactical spread:
+  - party estimate.
+  - enemy roster.
+  - difficulty.
+  - environment.
+  - notes.
+- enemy rows כמו mini stat blocks.
+- danger level עם wine/rust scale.
+
+### Enemy Library
+
+- tile/list switch.
+- tile כולל:
+  - illustration.
+  - name.
+  - type.
+  - CR.
+  - size.
+  - source.
+- detail view כמו bestiary page:
+  - large creature illustration.
+  - lore text.
+  - full stat block.
+  - actions.
+  - tactics.
+  - encounter usage.
+
+### Enemy Detail
+
+המסך צריך להרגיש כמו עמוד bestiary:
+
+- creature art משמאל/למעלה.
+- lore column.
+- stat block ממוסגר.
+- red section headers.
+- ability score row.
+- actions separated by thin rules.
+- legendary/lair sections.
+- DM notes באזור marginalia.
+
+### Live Combat
+
+- map נשאר מרכזי.
+- panels מסביב בהירים.
+- initiative panel כמו parchment roster.
+- selected enemy panel כמו stat block.
+- combat log כמו session ledger.
+- critical events מסומנים בצבע, לא ברקע כהה.
+
+### Maps
+
+- canvas יכול להיות כהה או צבעוני לפי המפה עצמה.
+- chrome מסביב נשאר בהיר.
+- fog of war כהה רק על המפה.
+- toolbar parchment with dark ink icons.
+
+### Notes & Secrets
+
+- journal style.
+- private notes with wax-seal icon.
+- revealed notes shift from faded parchment to full contrast.
+- handouts can use full-bleed illustrations.
+
+### Homebrew Builder
+
+- live preview בצד ימין כמו printed stat block.
+- form בצד שמאל.
+- כל שינוי מתעדכן מיד.
+- export to PDF/print style.

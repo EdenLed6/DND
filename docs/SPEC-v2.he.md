@@ -1,4 +1,5 @@
 # מסמך אפיון־על — D&D 5e Campaign Manager
+> **Visual Direction Override:** הממשק הראשי בהיר. אין להשתמש ב־dark UI כברירת מחדל. הכיוון המחייב הוא Light Fantasy Rulebook.
 
 > גרסה 2.0 · יולי 2026  
 > מסמך זה מחליף את גרסה 1.0 ומפצל את המוצר לשתי חוויות מוצר מלאות: **Player Portal** ו־**Dungeon Master Portal**.  
@@ -159,47 +160,163 @@ D&D דורש הרבה מידע. אין לנסות "לפשט" באמצעות הס
 
 ## 4. שפה עיצובית
 
-### 4.1 כיוון
 
-Dark Fantasy Product UI:
+## שפה עיצובית מעודכנת — Light Fantasy Rulebook
 
-- בסיס כהה מאוד, כמעט שחור.
-- Surface בגווני slate / charcoal.
-- Header בגוון blue-black.
-- Accent ראשי crimson.
-- Accent משני arcane blue.
-- טקסט לבן/אפור בהיר.
-- קווים דקים כחולים־אפורים.
-- איורי טקסטורה ו־fantasy motifs רק כרקע משני.
-- ללא קלף בהיר כממשק הראשי בנייד.
-- ללא ניאון סגול.
-- ללא "כרטיסים" לבנים בסגנון SaaS.
+### כיוון כללי
 
-### 4.2 טוקנים ראשיים
+המוצר יהיה בהיר, עשיר ומאויר, בהשראת התחושה של ספרי חוקים ובסטיארי פנטזיים מודפסים:
 
-- `--bg-deep: #0B1115`
-- `--bg-app: #10181D`
-- `--surface-1: #19242C`
-- `--surface-2: #22313D`
-- `--surface-3: #2B3D4A`
-- `--line: #334754`
-- `--text-primary: #F3F5F6`
-- `--text-secondary: #95A5B2`
-- `--accent-red: #D20A16`
-- `--accent-blue: #2299E8`
-- `--success: #65B84A`
-- `--warning: #D89A33`
-- `--danger: #E14949`
-- `--magic: #9957D9`
+- רקע קלף בהיר, לא לבן סטרילי.
+- טקסט כהה בגוון דיו.
+- מסגרות דקות ודקורטיביות.
+- כותרות בגוון אדום־יין / חום עמוק.
+- קווי הפרדה זהובים־חומים.
+- אזורי מידע שמרגישים כמו stat blocks מתוך ספר.
+- כתמי צבע מאוירים, watercolor washes ו־ink sketches.
+- איורים גדולים משולבים בתוך המסך, בעיקר ב־headers, creature pages ו־campaign pages.
+- שכבות נייר, סימני קיפול עדינים, קצוות דהויים וטקסטורות עדינות בלבד.
+- העיצוב חייב להרגיש איכותי ומודרני, לא "אתר וינטג׳" ולא סריקה ישנה.
 
-### 4.3 טיפוגרפיה
+### עקרון מרכזי
 
-- UI: Inter / Roboto / system sans
-- Fantasy display: Cinzel, רק בכותרות נבחרות
-- מספרים: tabular numerals
-- גוף טקסט: 16–18px בנייד
-- Labels: uppercase 11–13px
-- Section titles: 22–28px
+ה־UX יכול להיות צפוף ורובסטי כמו D&D Beyond, אך המעטפת הגרפית תהיה של ספר חוקים פנטזי חי:
+
+- תוכן נוח לסריקה.
+- הרבה טבלאות ורשימות.
+- כותרות חזקות.
+- modules בהירים.
+- sections ארוכים.
+- sticky headers.
+- כפתורים מודרניים.
+- ללא רקע כהה כממשק ראשי.
+- ללא neon.
+- ללא purple gaming aesthetic.
+- ללא cards לבנים גנריים בסגנון SaaS.
+
+### טוקנים צבעוניים
+
+- `--canvas: #F3ECD9`
+- `--paper: #FBF7EA`
+- `--paper-deep: #E9DFC5`
+- `--ink: #2B241D`
+- `--ink-soft: #5E5448`
+- `--wine: #7A2B2F`
+- `--wine-dark: #552025`
+- `--gold: #B58A42`
+- `--gold-soft: #D7C08A`
+- `--sage: #8C9877`
+- `--mist-blue: #8DA7B4`
+- `--rust: #A85D3B`
+- `--line: #CDBF9F`
+- `--line-strong: #A38C62`
+- `--success: #6F8A5B`
+- `--warning: #B98338`
+- `--danger: #A33F3F`
+- `--magic: #6E5B9B`
+
+### שימוש בצבע
+
+- אדום־יין: כותרות, active states, section labels, primary actions.
+- זהב: borders, accents, stat ornaments, focus rings.
+- ירוק־מרווה: healing, nature, successful states.
+- כחול מעושן: magic, arcane data, informational callouts.
+- חלודה: monsters, fire, danger, destructive actions.
+- שחור/דיו: גוף טקסט עיקרי.
+
+### טיפוגרפיה
+
+- Display headings: `Cinzel`, `Cormorant SC` או serif דקורטיבי דומה.
+- Body: `Crimson Pro`, `Source Serif 4` או serif קריא.
+- UI labels/buttons: `Inter` או sans נקי.
+- Stat values: serif numerals עם tabular lining.
+- Section labels: uppercase small caps.
+- גוף טקסט בנייד: 16–18px.
+- line-height: 1.45–1.6.
+- אין להשתמש בפונט דקורטיבי בגוף טקסט ארוך.
+
+### משטחים ורכיבים
+
+#### Page Canvas
+- רקע קלף עם noise עדין.
+- watercolor stain אופציונלי בפינות.
+- לא להשתמש בצל כבד.
+
+#### Section Header
+- פס כותרת בהיר עם קו זהב.
+- אייקון מאויר קטן.
+- כותרת ב־wine.
+- grid/list toggle בצד.
+
+#### Stat Block
+- רקע parchment עמוק יותר.
+- מסגרת כפולה או קו עליון/תחתון.
+- כותרת אדומה.
+- ערכים צפופים.
+- שימוש בטבלאות דקות.
+
+#### Cards
+- לא כל דבר יהיה card.
+- card רק לאובייקט עצמאי.
+- border דק.
+- radius קטן יחסית, 8–14px.
+- shadow עדין מאוד.
+
+#### Buttons
+- Primary: wine על parchment.
+- Secondary: outline gold.
+- Ghost: שקוף.
+- Danger: rust/red.
+- כפתורי Roll: כחול־מעושן או wine עם אייקון קובייה.
+
+### איורים
+
+- איור דמות ב־character header.
+- איור מפלצת ב־enemy detail.
+- איורי environment בקמפיין ובמפות.
+- ink sketches באזורי whitespace.
+- watercolor background crops.
+- איורים לעולם לא יפגעו בקריאות.
+- יש להימנע מעומס של dragons/swords בכל מקום.
+
+### דקורציה
+
+- מסגרות פינתיות עדינות.
+- botanical/arcane flourishes.
+- sigils.
+- runes.
+- dividers בהשראת פרקי ספר.
+- stat block bars.
+- parchment tabs.
+- map labels.
+- wax seal רק במקומות טקסיים.
+
+### מובייל
+
+- הבהירות נשמרת גם במובייל.
+- header דמות יכול להיות בגוון parchment עמוק יותר.
+- bottom nav בהיר עם border עליון.
+- floating dice button יכול להיות wine.
+- sticky section headers על רקע paper אטום.
+- אין מעבר אוטומטי למצב כהה.
+
+### דסקטופ
+
+- canvas רחב שמרגיש כמו spread של ספר.
+- עמודת תוכן ראשית + side reference panels.
+- אפשרות ל־two-column editorial layout.
+- large illustrations as anchored side art.
+- stat blocks יכולים לשבת לצד lore text.
+
+### נגישות
+
+- contrast מינימלי AA.
+- טקסט לעולם לא מונח ישירות על איור עמוס ללא overlay.
+- focus ring זהוב ברור.
+- צבע אינו הסמן היחיד.
+- supports reduced motion.
+
+
 
 ---
 
