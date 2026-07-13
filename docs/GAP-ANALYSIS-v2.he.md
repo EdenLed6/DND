@@ -67,9 +67,18 @@ v2.2 קובעת **Visual Direction Override: הממשק הראשי בהיר** �
 
 ---
 
-## 3. תוכנית מימוש בשלבים
+## 3. תוכנית מימוש בשלבים — סטטוס
 
-> כל שלב עומד בפני עצמו, נבדק ונדחף. הסדר נבנה כך שכל שלב נשען על קודמו.
+> **עודכן:** שלבים 1–6 מומשו. ✅ = הושלם, נבדק ונדחף. פערים שנשארו בכוונה מפורטים בסוף הסעיף.
+
+- ✅ **שלב 1** — טוקנים ל-Light Fantasy Rulebook, שער Player/DM, ‏Character Shell (header דביק + מדורים), DM Home עם sidebar. *(Grid/List switch לא מומש — המדורים בחרו את הפריסה המתאימה להם.)*
+- ✅ **שלב 2** — Overlay תלת־ממדי (Three.js+cannon-es, 7 סוגי קוביות, פאה=תוצאה, Roll Cards, Builder, fallback), פרסר מורחב, Roll feed עם visibility בשרת. *(Themes לקוביות ו-flick ידני — לא מומשו.)*
+- ✅ **שלב 3** — Actions economy, ‏adv/dis+situational, ‏Pin skills, ‏Speed & Defenses, ‏Notes לשחקן. *(Extras/Creatures ו-charges/ammo — לא מומשו.)*
+- ✅ **שלב 4** — מחשבון קושי, מערכת Conditions מלאה עם אוטומציית תורים, ספריית אויבים + Homebrew builder, DM Dashboard. *(כלי מפה מתקדמים — ציור/קירות/תאורה — לא מומשו; ping/ruler/AoE קיימים.)*
+- ✅ **שלב 5** — Sessions (prep/live/recap), ‏NPCs/Quests עם הפרדת סודות, DM Notes & Secrets עם חשיפה חיה, Party Inventory עם claims, הגדרות קמפיין, Audit log. *(Locations כישות נפרדת — מכוסה חלקית דרך שדה location ב-NPC וקטגוריית Location בהערות; אישור עליות דרגה — לא מומש.)*
+- ✅ **שלב 6** — Undo לנזק בקרב, אישורי מחיקה, Empty states, Print view + Character Summary, עדכון מסמכים.
+
+### תוכנית השלבים המקורית (לתיעוד)
 
 ### שלב 1 — שפה עיצובית + שלדי הפורטלים *(היסוד להכל)*
 1. החלפת טוקנים ל-Dark Fantasy UI לפי v2 §4.2 (מרכזי — `globals.css` + Tailwind + מעבר קשיחים).

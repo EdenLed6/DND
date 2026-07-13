@@ -3,14 +3,20 @@
 אפליקציה לניהול קמפיינים משותפים של Dungeons & Dragons 5th Edition — ניהול דמות
 ברמת D&D Beyond, ניהול קמפיין בשליטת DM מלאה, וניהול קרב ומפות חי בזמן אמת.
 
-> **Status:** ✅ עובד מקצה-לקצה — שלושת העמודים + כל ה-Polish (M1–M7).
-> תכנון מלא (מוח D&D) ב-`docs/`. מנוע חוקים עם 15 בדיקות עוברות. Build production תקין.
+> **Status:** ✅ SPEC v2.2 ("Light Fantasy Rulebook") ממומש — שני פורטלים מלאים,
+> קוביות תלת־ממדיות פיזיקליות, ומערכת עולם לשה"מ. מנוע חוקים עם 59 בדיקות עוברות.
+> אפיון: `docs/SPEC-v2.he.md` + מערכת עיצוב חיה ב-`docs/design-system/`.
 >
-> Includes: live character wizard + sheet · level-up wizard (HP/ASI/feat/subclass/
-> multiclass) · inventory & spell management from the compendium · JSON export/import ·
-> DM board (XP/levels/gold/loot/rest) · live combat with draggable tokens & avatars,
-> attack rolls, initiative, combat log · distance ruler & AoE templates · 63 SVG maps
-> + map upload · **fog of war** · full SRD compendium with detail pages.
+> **Player Portal:** אשף דמות · גיליון במדורים עם header דביק · גלגול-בלחיצה עם
+> Adv/Dis + בונוס מצבי · הטלת לחשים עם שדרוג · מנוחות/משאבים/עומס · Actions
+> economy מלא · Speed & Defenses · הערות שחקן עם שיתוף-לשה"מ · Print/Summary ·
+> ייצוא/ייבוא JSON.
+> **Dice:** overlay תלת־ממדי (Three.js + פיזיקה, הפאה=התוצאה), Dice Builder,
+> פרסר kh/kl/reroll/explode, ו-roll feed קמפייני חי עם visibility בשרת.
+> **DM Portal:** ‏DM Home ‏· Sessions (prep/live/recap) · NPCs/Quests עם סודות ·
+> DM Notes עם חשיפה חיה · Party Loot עם claims · מחשבון קושי DMG · מערכת
+> Conditions עם אוטומציית תורים · ספריית אויבים + בונה הומברו · קרב חי עם ערפל
+> מלחמה מסונן-שרת, Undo, ו-Audit log · הגדרות קמפיין.
 > UI is English.
 >
 > **Installable web app (PWA):** open the site, sign up, and add it to your phone's
