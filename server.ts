@@ -84,6 +84,24 @@ app.prepare().then(() => {
     });
   });
 
+  // Data-retention sweep (GDPR storage limitation / Israeli Security Regs):
+  // prune expired sessions & tokens and age out old audit logs. Runs on boot
+  // and daily thereafter.
+  const AUDIT_RETENTION_DAYS = 180;
+  async function retentionSweep() {
+    try {
+      const now = new Date();
+      const auditCutoff = new Date(now.getTime() - AUDIT_RETENTION_DAYS * 864e5);
+      await prisma.session.deleteMany({ where: { expiresAt: { lt: now } } });
+      await prisma.authToken.deleteMany({ where: { expiresAt: { lt: now } } });
+      await prisma.auditLog.deleteMany({ where: { ts: { lt: auditCutoff } } });
+    } catch (e) {
+      console.error("[retention] sweep failed:", (e as Error).message);
+    }
+  }
+  retentionSweep();
+  setInterval(retentionSweep, 24 * 60 * 60 * 1000);
+
   server.listen(port, () => {
     console.log(`> D&D Campaign Manager ready on http://localhost:${port} (dev=${dev})`);
   });

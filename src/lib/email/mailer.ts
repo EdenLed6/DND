@@ -29,6 +29,12 @@ async function deliver(msg: EmailMessage): Promise<void> {
 
   // ---- Add other providers here (Postmark/SendGrid/SMTP) ----
 
+  // In production a missing provider is a misconfiguration — fail loudly rather
+  // than silently logging recipient email addresses (PII) to server logs.
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("No email provider configured (set RESEND_API_KEY / EMAIL_PROVIDER).");
+  }
+
   // ---- Dev fallback: log instead of sending ----
   console.log("\n📧 [dev email — no provider configured]");
   console.log(`   To: ${msg.to}`);
@@ -66,6 +72,18 @@ export function verificationEmail(url: string): { subject: string; html: string;
     subject: "Verify your email — D&D Campaign Manager",
     html: wrap("Verify your email", "Welcome! Confirm your email address to secure your account.", { url, label: "Verify email" }),
     text: `Verify your email for D&D Campaign Manager: ${url}`,
+  };
+}
+
+export function inviteEmail(campaignName: string, dmName: string, code: string, url: string): { subject: string; html: string; text: string } {
+  return {
+    subject: `You're invited to the campaign "${campaignName}"`,
+    html: wrap(
+      `Adventure awaits: ${campaignName}`,
+      `${dmName} invited you to join their D&amp;D campaign. Sign in (or create an account) with <b>this email address</b>, then enter the invite code below.<div style="margin-top:12px;font-size:22px;letter-spacing:4px;color:#c9a227;font-weight:700">${code}</div>`,
+      { url, label: "Join the campaign" }
+    ),
+    text: `${dmName} invited you to join the D&D campaign "${campaignName}". Sign in with this email address and use invite code ${code}: ${url}`,
   };
 }
 

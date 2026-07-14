@@ -23,6 +23,7 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
   const router = useRouter();
   const [tab, setTab] = useState<"party" | "progress" | "sessions" | "world" | "loot" | "notes" | "rest" | "play">("party");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [invitesOpen, setInvitesOpen] = useState(false);
   const [sel, setSel] = useState<string[]>([]);
   const [xpAmt, setXpAmt] = useState("");
   const [goldGp, setGoldGp] = useState("");
@@ -67,10 +68,11 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
           <div className="text-sm text-[#5e5448]">{campaign.description || "—"} · DM: {campaign.dmName}</div>
         </div>
         <div className="text-right text-sm">
-          <div>Invite Code: <code className="text-gold">{campaign.inviteCode}</code></div>
+          {isDM && <div>Invite Code: <code className="text-gold">{campaign.inviteCode}</code></div>}
           <div className="text-[#5e5448]">{members.length} members · {party.length} characters</div>
           <div className="mt-1 flex items-center justify-end gap-2">
             {isDM ? <span className="chip">👑 DM</span> : <span className="chip">Player</span>}
+            {isDM && <button className="btn-ghost !px-2 !py-0.5" title="Invite players by email" onClick={() => setInvitesOpen(true)}>✉ Invites</button>}
             {isDM && <button className="btn-ghost !px-2 !py-0.5" title="Campaign Settings" onClick={() => setSettingsOpen(true)}>⚙ Settings</button>}
           </div>
         </div>
@@ -262,7 +264,83 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
       {isDM && settingsOpen && (
         <SettingsModal campaignId={campaign.id} onClose={() => { setSettingsOpen(false); router.refresh(); }} />
       )}
+      {isDM && invitesOpen && (
+        <InvitesModal campaignId={campaign.id} inviteCode={campaign.inviteCode} onClose={() => setInvitesOpen(false)} />
+      )}
     </main>
+  );
+}
+
+type Invite = { id: string; email: string; status: string; expiresAt: string };
+
+function InvitesModal({ campaignId, inviteCode, onClose }: { campaignId: string; inviteCode: string | null; onClose: () => void }) {
+  const [invites, setInvites] = useState<Invite[] | null>(null);
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = () => fetch(`/api/campaigns/${campaignId}/invites`).then((r) => r.json()).then((d) => setInvites(d.invites ?? [])).catch(() => setInvites([]));
+  useEffect(() => { load(); }, [campaignId]);
+
+  async function invite() {
+    if (!email.trim() || busy) return;
+    setBusy(true); setErr(null); setMsg(null);
+    const res = await fetch(`/api/campaigns/${campaignId}/invites`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email.trim() }),
+    });
+    setBusy(false);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { setErr(data.error ?? "Could not send invite"); return; }
+    setMsg(data.emailSent ? `Invitation emailed to ${email.trim()}.` : `Invite created (email delivery unavailable — share the code manually).`);
+    setEmail(""); load();
+  }
+
+  async function revoke(inviteId: string) {
+    await fetch(`/api/campaigns/${campaignId}/invites`, {
+      method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ inviteId }),
+    });
+    load();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div className="card w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+        <h3 className="mb-1 font-display text-lg text-gold">✉ Invite Players</h3>
+        <p className="muted mb-3 text-xs">Players join with <b>two</b> things: an email invitation (below) <b>and</b> the campaign invite code. Both are required.</p>
+
+        <div className="panel-inset mb-3 flex items-center justify-between p-2 text-sm">
+          <span>Invite code</span>
+          <code className="text-gold">{inviteCode ?? "—"}</code>
+        </div>
+
+        <div className="flex gap-2">
+          <input className="input flex-1" type="email" placeholder="player@email.com" value={email}
+            onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === "Enter" && invite()} />
+          <button className="btn-primary" disabled={busy || !email} onClick={invite}>Send</button>
+        </div>
+        {msg && <p className="mt-2 text-sm text-emerald-700">{msg}</p>}
+        {err && <p className="mt-2 text-sm text-red-700">{err}</p>}
+
+        <div className="mt-4 space-y-1">
+          {invites === null && <p className="muted text-sm">Loading…</p>}
+          {invites?.length === 0 && <p className="muted text-sm">No invitations yet.</p>}
+          {invites?.map((inv) => (
+            <div key={inv.id} className="flex items-center justify-between panel-inset p-2 text-sm">
+              <div className="min-w-0">
+                <div className="truncate">{inv.email}</div>
+                <div className="faint text-xs">{inv.status}{inv.status === "pending" && ` · expires ${new Date(inv.expiresAt).toLocaleDateString()}`}</div>
+              </div>
+              {inv.status === "pending" && <button className="btn-ghost !px-2 !py-0.5 text-xs" onClick={() => revoke(inv.id)}>Revoke</button>}
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <button className="btn-ghost" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
   );
 }
 

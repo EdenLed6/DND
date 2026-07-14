@@ -353,7 +353,14 @@ function cellFrom(e: React.PointerEvent | React.MouseEvent, gridSize: number, co
 function TokenView({ token, combatant, gridSize, draggable, dm }: any) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: token.id, disabled: !draggable });
   const size = (token.sizeSquares ?? 1) * gridSize;
-  const hpPct = combatant ? Math.round((combatant.currentHp / Math.max(1, combatant.maxHp)) * 100) : 100;
+  // Hidden-HP monsters (players' view) carry no exact numbers — fall back to the
+  // coarse hpStatus bucket for the health bar.
+  const hpHidden = combatant && combatant.currentHp == null;
+  const hpPct = !combatant
+    ? 100
+    : hpHidden
+      ? (combatant.hpStatus === "down" ? 0 : combatant.hpStatus === "bloodied" ? 40 : 100)
+      : Math.round((combatant.currentHp / Math.max(1, combatant.maxHp)) * 100);
   const style: React.CSSProperties = {
     position: "absolute", left: token.gridX * gridSize, top: token.gridY * gridSize,
     width: size, height: size, transform: transform ? `translate(${transform.x}px, ${transform.y}px)` : undefined,
@@ -363,7 +370,7 @@ function TokenView({ token, combatant, gridSize, draggable, dm }: any) {
   return (
     <div ref={setNodeRef} style={style} {...listeners} {...attributes}
       className="flex items-center justify-center rounded-full border-2 text-xs font-bold text-white"
-      title={combatant ? `${combatant.name} — HP ${combatant.currentHp}/${combatant.maxHp} AC ${combatant.ac}` : token.label}>
+      title={combatant ? (hpHidden ? `${combatant.name} — ${combatant.hpStatus ?? "unknown"}` : `${combatant.name} — HP ${combatant.currentHp}/${combatant.maxHp} AC ${combatant.ac}`) : token.label}>
       <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border-2 border-black/40"
         style={token.imageUrl
           ? { backgroundImage: `url(${token.imageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
@@ -476,7 +483,9 @@ function InitiativeTracker({ combatants, activeId, isDM, onUpdate, selectedId, o
                   <span className={c.kind === "monster" ? "text-red-900" : "text-blue-900"}>{c.kind === "monster" ? "👹" : "🛡"}</span>
                   {c.name}{!c.isVisible && " 👁️‍🗨️"}
                 </span>
-                <span className={c.currentHp === 0 ? "text-red-700" : ""}>{c.currentHp}/{c.maxHp}</span>
+                {c.currentHp == null
+                  ? <span className="capitalize text-[#7d6f5c]">{c.hpStatus ?? "—"}</span>
+                  : <span className={c.currentHp === 0 ? "text-red-700" : ""}>{c.currentHp}/{c.maxHp}</span>}
               </div>
               {conds.length > 0 && (
                 <div className="mt-1 flex flex-wrap gap-1">
@@ -579,8 +588,9 @@ function SelectedCombatantPanel({ combatant, isDM, onClose, onAddCondition, onRe
         <button className="btn-ghost !px-1.5 !py-0 text-xs" onClick={onClose}>✕</button>
       </div>
       <div className="mb-2 flex gap-2 text-xs text-[#5e5448]">
-        <span className="chip">HP {combatant.currentHp}/{combatant.maxHp}</span>
-        <span className="chip">AC {combatant.ac}</span>
+        {combatant.currentHp == null
+          ? <span className="chip capitalize">{combatant.hpStatus ?? "status unknown"}</span>
+          : <><span className="chip">HP {combatant.currentHp}/{combatant.maxHp}</span><span className="chip">AC {combatant.ac}</span></>}
         <span className="chip">Init {combatant.initiative}</span>
       </div>
       <div className="text-xs uppercase tracking-wide text-[#857866]">Conditions</div>

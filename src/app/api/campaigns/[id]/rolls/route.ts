@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { prisma } from "@/lib/db";
 import { requireUser, bad } from "@/lib/api";
 import { roleInCampaign } from "@/lib/auth/rbac";
 import { limitOr429 } from "@/lib/rate-limit";
@@ -31,12 +32,28 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (limited) return limited;
 
   const role = await roleInCampaign(user.id, campaignId);
-  if (!role) return bad("Not a member of this campaign", 403);
+  // VIEWER is read-only; only DM/PLAYER may publish rolls.
+  if (role !== "DM" && role !== "PLAYER") return bad("Not a member of this campaign", 403);
 
   const parsed = rollSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return bad("Invalid input");
 
-  const payload = { ...parsed.data, by: user.displayName, ts: Date.now() };
+  // Prevent impersonation: a claimed characterName must be a character the caller
+  // owns in this campaign (the DM may roll as any character in the campaign).
+  let characterName = parsed.data.characterName;
+  if (characterName) {
+    const owned = await prisma.character.findFirst({
+      where: {
+        campaignId,
+        name: characterName,
+        ...(role === "DM" ? {} : { ownerId: user.id }),
+      },
+      select: { id: true },
+    });
+    if (!owned) characterName = undefined;
+  }
+
+  const payload = { ...parsed.data, characterName, by: user.displayName, ts: Date.now() };
 
   switch (payload.visibility) {
     case "self":

@@ -31,7 +31,8 @@ export async function POST(req: Request) {
 
   if (d.campaignId) {
     const role = await roleInCampaign(user.id, d.campaignId);
-    if (!role) return bad("You are not a member of this campaign", 403);
+    // VIEWER is read-only; only DM/PLAYER may add characters to a campaign.
+    if (role !== "DM" && role !== "PLAYER") return bad("You are not a member of this campaign", 403);
   }
 
   const saveProfs = d.savingThrows.map((s) => s.toLowerCase()).filter((s) => ["str", "dex", "con", "int", "wis", "cha"].includes(s)) as Ability[];

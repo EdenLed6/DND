@@ -32,7 +32,14 @@ const nextConfig = {
   poweredByHeader: false,
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: false },
-  images: { remotePatterns: [{ protocol: "https", hostname: "**" }] },
+  // Restrict the image optimizer to hosts we actually embed (Google avatars).
+  // A wildcard here turns /_next/image into an open server-side fetch proxy (SSRF).
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
+      { protocol: "https", hostname: "*.googleusercontent.com" },
+    ],
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { randomInt } from "node:crypto";
 import { getCurrentUser } from "@/lib/auth/session";
 
 export async function requireUser() {
@@ -8,9 +9,11 @@ export async function requireUser() {
 }
 
 export function genInviteCode(): string {
+  // Cryptographically-random (not Math.random) so codes can't be predicted from
+  // observed outputs. 8 chars over a 32-symbol alphabet ≈ 40 bits.
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let s = "";
-  for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < 8; i++) s += chars[randomInt(chars.length)];
   return s;
 }
 

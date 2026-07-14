@@ -1,14 +1,21 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 export function DashboardActions() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [modal, setModal] = useState<null | "campaign" | "join">(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [code, setCode] = useState("");
+
+  // Invitation emails link to /dashboard?join=CODE — open the join modal prefilled.
+  useEffect(() => {
+    const joinCode = searchParams.get("join");
+    if (joinCode) { setCode(joinCode.toUpperCase()); setModal("join"); }
+  }, [searchParams]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -74,6 +81,7 @@ export function DashboardActions() {
             ) : (
               <>
                 <h3 className="mb-3 font-display text-lg text-gold">Join Campaign</h3>
+                <p className="muted mb-3 text-xs">Joining requires an email invitation from the DM <b>and</b> the invite code. Make sure you're signed in with the invited email address.</p>
                 <label className="label">Invite Code</label>
                 <input className="input mb-3" value={code} onChange={(e) => setCode(e.target.value)} placeholder="ABCD12" />
                 {error && <p className="mb-2 text-sm text-red-700">{error}</p>}

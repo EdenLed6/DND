@@ -1,6 +1,13 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
+import { Cinzel, Crimson_Pro, Inter } from "next/font/google";
 import { PwaRegister } from "@/components/PwaRegister";
+
+// Self-hosted (downloaded at build, served from our origin) — no request to
+// Google's CDN on page load, so no visitor-IP leak and no CSP conflict.
+const cinzel = Cinzel({ subsets: ["latin"], weight: ["400", "600", "700"], variable: "--font-display", display: "swap" });
+const crimson = Crimson_Pro({ subsets: ["latin"], weight: ["400", "600", "700"], style: ["normal", "italic"], variable: "--font-serif", display: "swap" });
+const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-ui-face", display: "swap" });
 
 export const metadata: Metadata = {
   title: "D&D 5e Campaign Manager",
@@ -23,16 +30,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-        <link
-          href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="en" className={`${cinzel.variable} ${crimson.variable} ${inter.variable}`}>
       <body className="min-h-[100dvh]">
         {children}
         <PwaRegister />

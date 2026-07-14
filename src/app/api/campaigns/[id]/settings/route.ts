@@ -7,26 +7,7 @@ import { requireUser, bad } from "@/lib/api";
 import { isDM, canViewCampaign } from "@/lib/auth/rbac";
 import { emitToCampaign } from "@/lib/realtime/io";
 import { logAudit } from "@/lib/audit";
-
-const settingsSchema = z.object({
-  xpMode: z.enum(["xp", "milestone"]).default("xp"),
-  enemyHpVisible: z.boolean().default(false),
-  diceVisibilityDefault: z.enum(["public", "dm"]).default("public"),
-  critRule: z.enum(["standard", "double-total"]).default("standard"),
-  restVariant: z.enum(["standard", "gritty"]).default("standard"),
-  joinApproval: z.boolean().default(false),
-});
-export type CampaignSettings = z.infer<typeof settingsSchema>;
-
-function resolveSettings(settingsJson: string, xpModeColumn: string): CampaignSettings {
-  let stored: unknown = {};
-  try { stored = JSON.parse(settingsJson); } catch { /* corrupt json → defaults */ }
-  const merged = settingsSchema.safeParse({
-    xpMode: xpModeColumn === "milestone" ? "milestone" : "xp",
-    ...(typeof stored === "object" && stored !== null ? stored : {}),
-  });
-  return merged.success ? merged.data : settingsSchema.parse({});
-}
+import { settingsSchema, resolveSettings, type CampaignSettings } from "@/lib/campaign-settings";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: campaignId } = await params;

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireUser, bad, safeImageUrl } from "@/lib/api";
 import { isDM, roleInCampaign } from "@/lib/auth/rbac";
+import { resolveSettings } from "@/lib/campaign-settings";
 import * as combat from "@/lib/combat-service";
 
 async function encCampaign(encounterId: string) {
@@ -16,7 +17,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const campaignId = await encCampaign(id);
   const role = campaignId ? await roleInCampaign(user.id, campaignId) : null;
   if (!campaignId || !role) return bad("No access", 403);
-  const state = combat.filterStateForRole(await combat.encounterState(id), role === "DM");
+  const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } });
+  const enemyHpVisible = campaign ? resolveSettings(campaign.settingsJson, campaign.xpMode).enemyHpVisible : false;
+  const state = combat.filterStateForRole(await combat.encounterState(id), role === "DM", enemyHpVisible);
   return NextResponse.json(state);
 }
 
@@ -61,6 +64,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       case "revealCells": await combat.revealCells(id, body.cells ?? [], body.reveal !== false); break;
       case "setAllCells": await combat.setAllCells(id, !!body.revealAll); break;
       case "setMap": {
+        // Only maps belonging to THIS campaign may be attached (no cross-campaign
+        // map-id smuggling).
+        if (body.mapId) {
+          const map = await prisma.gameMap.findFirst({ where: { id: body.mapId, campaignId } });
+          if (!map) return bad("Map not in this campaign", 400);
+        }
         await prisma.encounter.update({ where: { id }, data: { mapId: body.mapId ?? null } });
         break;
       }

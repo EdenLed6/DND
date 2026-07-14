@@ -59,7 +59,7 @@ model Campaign {
   name        String
   description String?
   dmId        String
-  dm          User     @relation("DM", fields: [dmId], references: [id])
+  dm          User     @relation("DM", fields: [dmId], references: [id], onDelete: Cascade)
   partyGoldCp Int      @default(0) // party purse stored in copper
   xpMode      String   @default("xp") // "xp" | "milestone"
   inviteCode  String   @unique
@@ -80,6 +80,23 @@ model Campaign {
   partyItems PartyItem[]
   auditLogs  AuditLog[]
   homebrewMonsters HomebrewMonster[]
+  invites    CampaignInvite[]
+}
+
+// Email invitation — joining a campaign requires BOTH a pending invite for the
+// user's (verified) email AND the campaign invite code. Two independent layers.
+model CampaignInvite {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  email      String // invited address, stored lowercased
+  invitedBy  String // DM userId
+  status     String   @default("pending") // pending | accepted | revoked
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@unique([campaignId, email])
+  @@index([email])
 }
 
 // ============================================================

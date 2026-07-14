@@ -41,13 +41,17 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
       <TopNav user={user} />
       <CampaignView
         campaign={{ id: campaign.id, name: campaign.name, description: campaign.description,
-          inviteCode: campaign.inviteCode, partyGoldCp: campaign.partyGoldCp, xpMode: campaign.xpMode,
+          // The invite code is DM-only material (used with the email invite).
+          inviteCode: isDM ? campaign.inviteCode : null, partyGoldCp: campaign.partyGoldCp, xpMode: campaign.xpMode,
           dmName: campaign.dm.displayName }}
         members={campaign.members.map((m) => ({ id: m.id, name: m.user.displayName, role: m.role, userId: m.userId }))}
         party={party}
         loot={campaign.loot.map((l) => ({ id: l.id, name: l.name, quantity: l.quantity, goldValueCp: l.goldValueCp }))}
-        encounters={campaign.encounters.map((e) => ({ id: e.id, name: e.name, status: e.status }))}
-        maps={campaign.maps.map((m) => ({ id: m.id, name: m.name }))}
+        // Players only see encounters that are underway; PLANNING is DM prep.
+        encounters={campaign.encounters
+          .filter((e) => isDM || e.status !== "PLANNING")
+          .map((e) => ({ id: e.id, name: e.name, status: e.status }))}
+        maps={isDM ? campaign.maps.map((m) => ({ id: m.id, name: m.name })) : []}
         isDM={isDM}
         me={{ id: user.id, name: user.displayName }}
       />

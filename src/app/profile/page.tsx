@@ -1,11 +1,15 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
+import { prisma } from "@/lib/db";
 import { TopNav } from "@/components/TopNav";
 import { ProfileActions } from "./ProfileActions";
 
 export default async function ProfilePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+
+  const account = await prisma.user.findUnique({ where: { id: user.id }, select: { passwordHash: true } });
+  const hasPassword = !!account?.passwordHash;
 
   const verified = !!user.emailVerified;
   const initial = (user.displayName || user.email || "?").trim().charAt(0).toUpperCase();
@@ -39,7 +43,7 @@ export default async function ProfilePage() {
 
         <div className="card">
           <h2 className="mb-3 font-display text-lg text-gold">Account</h2>
-          <ProfileActions />
+          <ProfileActions hasPassword={hasPassword} />
         </div>
       </main>
     </div>

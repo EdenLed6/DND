@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser, bad, safeImageUrl } from "@/lib/api";
-import { canEditCharacter, roleInCampaign } from "@/lib/auth/rbac";
+import { canEditCharacter, roleInCampaign, isDM } from "@/lib/auth/rbac";
 import { emitToCampaign } from "@/lib/realtime/io";
 
 const patchSchema = z.object({
@@ -49,6 +49,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!parsed.success) return bad("Invalid input");
 
   const data: any = { ...parsed.data };
+
+  // XP governs level. In a campaign it is DM-controlled (awarded via the audited
+  // /xp endpoint) — a player must not self-level by patching their own sheet.
+  // For solo characters (no campaign) the owner may set it freely.
+  if ("xp" in data) {
+    const target = await prisma.character.findUnique({ where: { id }, select: { campaignId: true } });
+    if (target?.campaignId && !(await isDM(user.id, target.campaignId))) {
+      delete data.xp;
+    }
+  }
+
   if (data.conditions) data.conditions = JSON.stringify(data.conditions);
   // Sanitize user-supplied image URL (reject javascript:/data:/other schemes).
   if ("avatarUrl" in data) data.avatarUrl = data.avatarUrl ? safeImageUrl(data.avatarUrl) : null;

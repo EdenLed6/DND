@@ -19,6 +19,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [agreed, setAgreed] = useState(false);
   const [googleEnabled, setGoogleEnabled] = useState(false);
 
   useEffect(() => {
@@ -31,14 +33,21 @@ export default function LoginPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true); setError(null);
+    setBusy(true); setError(null); setNotice(null);
     const url = mode === "login" ? "/api/auth/login" : "/api/auth/register";
     const payload = mode === "login" ? { email, password } : { email, displayName, password };
     const res = await fetch(url, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
     });
+    const data = await res.json().catch(() => ({}));
     setBusy(false);
-    if (!res.ok) { setError((await res.json()).error ?? "Something went wrong"); return; }
+    if (!res.ok) { setError(data.error ?? "Something went wrong"); return; }
+    // Register may return a neutral "pending" response (email already in use) —
+    // we can't tell the client whether it was a new account, so show a notice.
+    if (mode === "register" && data.pending) {
+      setNotice("Check your email to finish setting up your account.");
+      return;
+    }
     router.push("/portal"); router.refresh();
   }
 
@@ -87,10 +96,22 @@ export default function LoginPage() {
             <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={mode === "register" ? 8 : undefined} />
             {mode === "register" && <p className="mt-1 text-xs text-[#857866]">At least 8 characters.</p>}
           </div>
+          {mode === "register" && (
+            <label className="flex items-start gap-2 text-xs text-[#5e5448]">
+              <input type="checkbox" className="mt-0.5" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+              <span>I agree to the <Link href="/privacy" className="text-gold underline" target="_blank">Privacy Policy</Link> and understand my email and campaign data are stored to run the service.</span>
+            </label>
+          )}
           {error && <p className="text-sm text-red-700">{error}</p>}
-          <button className="btn-primary w-full" disabled={busy}>
+          {notice && <p className="text-sm text-emerald-700">{notice}</p>}
+          <button className="btn-primary w-full" disabled={busy || (mode === "register" && !agreed)}>
             {busy ? "..." : mode === "login" ? "Sign In" : "Sign Up"}
           </button>
+          {mode === "login" && (
+            <p className="text-center text-xs text-[#857866]">
+              By continuing you agree to our <Link href="/privacy" className="text-gold underline" target="_blank">Privacy Policy</Link>.
+            </p>
+          )}
         </form>
       </div>
     </div>

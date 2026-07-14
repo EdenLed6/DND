@@ -35,26 +35,59 @@ export async function encounterState(encounterId: string) {
 }
 
 /**
- * Redact an encounter state for a non-DM viewer: strip DM-hidden combatants,
- * their tokens, and raw stat blocks. Used by BOTH the API GET and the SSR page
- * so players never receive hidden monster data (fog of war / hidden combatants).
+ * Redact an encounter state for a non-DM viewer:
+ *  - strip DM-hidden combatants, their tokens, and raw stat blocks;
+ *  - when the campaign's `enemyHpVisible` is false, hide exact monster HP/AC
+ *    (replaced with a coarse "bloodied"/"healthy" status) — players never learn
+ *    a monster's precise numbers unless the DM opts in;
+ *  - drop combat-log lines that reference hidden combatants and strip the
+ *    undo/breakdown detail payloads (they carry exact HP).
+ * Used by BOTH the API GET and the SSR page.
+ *
+ * `enemyHpVisible` defaults to false (most protective) when not supplied.
  */
-export function filterStateForRole<T extends { combatants: any[]; tokens: any[] } | null>(
+export function filterStateForRole<T extends { combatants: any[]; tokens: any[]; log?: any[] } | null>(
   state: T,
   isDM: boolean,
+  enemyHpVisible = false,
 ): T {
   if (!state || isDM) return state;
   const hiddenIds = new Set(state.combatants.filter((c: any) => !c.isVisible).map((c: any) => c.id));
   state.combatants = state.combatants
     .filter((c: any) => c.isVisible)
-    .map((c: any) => ({
-      ...c,
-      statBlockJson: null,
-      // Players only see public conditions (DM-only ones are stripped; conditions
-      // on hidden combatants disappear with the combatant filter above).
-      appliedConditions: (c.appliedConditions ?? []).filter((ac: any) => ac.visibility === "public"),
-    }));
+    .map((c: any) => {
+      const base = {
+        ...c,
+        statBlockJson: null,
+        // Players only see public conditions (DM-only ones are stripped; conditions
+        // on hidden combatants disappear with the combatant filter above).
+        appliedConditions: (c.appliedConditions ?? []).filter((ac: any) => ac.visibility === "public"),
+      };
+      // Hide precise enemy numbers unless the DM enabled it. Player-controlled
+      // characters always show their own HP.
+      if (c.kind === "monster" && !enemyHpVisible) {
+        const ratio = c.maxHp > 0 ? c.currentHp / c.maxHp : 0;
+        base.currentHp = null;
+        base.maxHp = null;
+        base.tempHp = null;
+        base.ac = null;
+        base.hpStatus = c.currentHp <= 0 ? "down" : ratio <= 0.5 ? "bloodied" : "healthy";
+      }
+      return base;
+    });
   state.tokens = state.tokens.filter((t: any) => !t.combatantId || !hiddenIds.has(t.combatantId));
+  if (Array.isArray(state.log)) {
+    state.log = state.log
+      .map((e: any) => {
+        let d: any = null;
+        try { d = JSON.parse(e.detailJson || "null"); } catch {}
+        // Drop entries that reference a hidden combatant, and strip the exact-HP
+        // detail payload (hpBefore/hpAfter/breakdown) from what players receive.
+        if (d && d.combatantId && hiddenIds.has(d.combatantId)) return null;
+        return { ...e, detailJson: null };
+      })
+      .filter(Boolean);
+  }
   return state;
 }
 
@@ -67,7 +100,10 @@ async function log(encounterId: string, actor: string, message: string, detail?:
   const entry = await prisma.combatLog.create({
     data: { encounterId, actor, message, detailJson: detail ? JSON.stringify(detail) : null },
   });
-  emitToEncounter(encounterId, "log:appended", { logEntry: entry });
+  // Do NOT broadcast the raw entry — it can name hidden combatants and carry
+  // exact-HP detail. Clients treat this as a signal and refetch the role-filtered
+  // state (see filterStateForRole), so players never receive unredacted log data.
+  emitToEncounter(encounterId, "log:appended", { encounterId });
   return entry;
 }
 

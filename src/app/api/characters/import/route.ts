@@ -45,7 +45,16 @@ export async function POST(req: Request) {
   if (!parsed.success) return bad("Invalid file");
   const c = parsed.data.character;
   const campaignId = parsed.data.campaignId || null;
-  if (campaignId && !(await roleInCampaign(user.id, campaignId))) return bad("You are not a member of this campaign", 403);
+  if (campaignId) {
+    const role = await roleInCampaign(user.id, campaignId);
+    if (role !== "DM" && role !== "PLAYER") return bad("You are not a member of this campaign", 403);
+    // Prevent importing a maxed-out sheet into a campaign to bypass the DM's
+    // XP/level progression. The DM can adjust afterwards via the audited flow.
+    if (role !== "DM") {
+      c.xp = 0;
+      if (Array.isArray(c.classes)) c.classes = c.classes.map((cl) => ({ ...cl, level: 1 }));
+    }
+  }
 
   const created = await prisma.character.create({
     data: {
