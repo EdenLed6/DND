@@ -459,6 +459,7 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
         )}
       </div>
       <CastableSpells
+        characterId={c.id}
         spells={spellDetails}
         spellcasting={derived.spellcasting}
         slotsUsed={slotsUsedMap}

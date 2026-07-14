@@ -95,6 +95,8 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const c = await prisma.character.findUnique({ where: { id } });
   if (!c) return bad("Not found", 404);
   if (c.ownerId !== user.id) return bad("Only the owner can delete", 403);
+  // RollLog references characterId without an FK; clean it up explicitly.
+  await prisma.rollLog.deleteMany({ where: { characterId: id } });
   await prisma.character.delete({ where: { id } });
   if (c.campaignId) emitToCampaign(c.campaignId, "character:deleted", { characterId: id });
   return NextResponse.json({ ok: true });

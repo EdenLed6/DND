@@ -28,9 +28,13 @@ export async function GET(req: Request) {
   if (characterId) {
     const c = await prisma.character.findUnique({ where: { id: characterId }, select: { ownerId: true, campaignId: true } });
     if (!c) return bad("Not found", 404);
-    const allowed = c.ownerId === user.id || (c.campaignId ? (await roleInCampaign(user.id, c.campaignId)) === "DM" : false);
-    if (!allowed) return bad("Not authorized", 403);
-    const rows = await prisma.rollLog.findMany({ where: { characterId }, orderBy: { ts: "desc" }, take });
+    const isOwner = c.ownerId === user.id;
+    const isCampaignDM = c.campaignId ? (await roleInCampaign(user.id, c.campaignId)) === "DM" : false;
+    if (!isOwner && !isCampaignDM) return bad("Not authorized", 403);
+    // The DM oversees public/dm rolls, but a player's private ("self") rolls stay
+    // private — only the roller sees them.
+    const where = isOwner ? { characterId } : { characterId, visibility: { in: ["public", "dm"] } };
+    const rows = await prisma.rollLog.findMany({ where, orderBy: { ts: "desc" }, take });
     return NextResponse.json(rows);
   }
   const rows = await prisma.rollLog.findMany({ where: { userId: user.id }, orderBy: { ts: "desc" }, take });
@@ -49,6 +53,11 @@ export async function POST(req: Request) {
   if (d.characterId) {
     const c = await prisma.character.findUnique({ where: { id: d.characterId }, select: { ownerId: true } });
     if (!c || c.ownerId !== user.id) return bad("Not your character", 403);
+  }
+  // A campaignId may only be stamped by an actual member (prevents spoofing rolls
+  // into a campaign feed the user doesn't belong to).
+  if (d.campaignId && !(await roleInCampaign(user.id, d.campaignId))) {
+    return bad("Not a member of this campaign", 403);
   }
 
   const row = await prisma.rollLog.create({

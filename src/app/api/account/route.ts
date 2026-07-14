@@ -44,6 +44,9 @@ export async function DELETE(req: Request) {
   // Purge data not covered by FK cascade (bare-string references to the user).
   await prisma.auditLog.deleteMany({ where: { userId: user.id } });
   await prisma.homebrewMonster.deleteMany({ where: { ownerId: user.id } });
+  await prisma.homebrewSpell.deleteMany({ where: { ownerId: user.id } });
+  await prisma.homebrewItem.deleteMany({ where: { ownerId: user.id } });
+  await prisma.rollLog.deleteMany({ where: { userId: user.id } });
 
   // Cascade handles: sessions, authTokens, characters (+children), memberships,
   // owned campaigns (Campaign.dm onDelete: Cascade) and everything under them.

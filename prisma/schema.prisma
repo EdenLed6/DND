@@ -82,6 +82,8 @@ model Campaign {
   homebrewMonsters HomebrewMonster[]
   invites    CampaignInvite[]
   worldPages WorldPage[]
+  homebrewSpells HomebrewSpell[]
+  homebrewItems  HomebrewItem[]
 }
 
 // Email invitation — joining a campaign requires BOTH a pending invite for the
@@ -395,24 +397,26 @@ model WorldPage {
 // Homebrew spells & items (DM content manager). dataJson mirrors the SRD
 // shapes (SrdSpell / SrdEquipment) so pickers can merge them seamlessly.
 model HomebrewSpell {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   ownerId    String
   campaignId String?
+  campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   name       String
-  dataJson   String   @default("{}")
-  createdAt  DateTime @default(now())
+  dataJson   String    @default("{}")
+  createdAt  DateTime  @default(now())
 
   @@index([ownerId])
   @@index([campaignId])
 }
 
 model HomebrewItem {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   ownerId    String
   campaignId String?
+  campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   name       String
-  dataJson   String   @default("{}") // {category, costGp, weight, desc, acBonus, damage, ...}
-  createdAt  DateTime @default(now())
+  dataJson   String    @default("{}") // {category, costGp, weight, desc, acBonus, damage, ...}
+  createdAt  DateTime  @default(now())
 
   @@index([ownerId])
   @@index([campaignId])
