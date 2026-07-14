@@ -30,6 +30,30 @@ export interface TrayEntry {
 let rollPublisher: ((e: TrayEntry) => void) | null = null;
 export function setRollPublisher(fn: ((e: TrayEntry) => void) | null) { rollPublisher = fn; }
 
+// Active character context: when a character sheet is open it registers its id
+// so every roll is persisted to that character's roll log. Cleared on unmount.
+let rollCharacterId: string | null = null;
+export function setRollCharacter(id: string | null) { rollCharacterId = id; }
+
+// Persist a roll to the durable roll log (fire-and-forget) and notify listeners
+// (the per-character RollLogPanel refreshes on "roll-logged").
+function persistRoll(e: TrayEntry) {
+  if (e.remote || typeof window === "undefined") return; // never re-log feed rolls
+  try {
+    void fetch("/api/roll-log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        characterId: rollCharacterId || undefined,
+        label: e.label,
+        expression: e.label,
+        total: e.total,
+        breakdown: e.breakdown + (e.extra ? `  ·  ${e.extra}` : ""),
+      }),
+    }).then(() => window.dispatchEvent(new Event("roll-logged"))).catch(() => {});
+  } catch { /* logging is best-effort */ }
+}
+
 interface TrayState { current: TrayEntry | null; log: TrayEntry[]; }
 
 let state: TrayState = { current: null, log: [] };
@@ -45,6 +69,8 @@ function push(entry: Omit<TrayEntry, "id">) {
   emit();
   // Broadcast local rolls to the campaign feed (never re-broadcast remote ones).
   if (!e.remote && rollPublisher) { try { rollPublisher(e); } catch { /* feed is optional */ } }
+  // Persist to the durable per-character roll log.
+  persistRoll(e);
   // Visual 3D overlay (fire-and-forget): throw physical dice over the UI and
   // show a roll card. The tray above stays the logical log / fallback.
   if (typeof window !== "undefined") {

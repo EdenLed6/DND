@@ -35,6 +35,8 @@ const patchSchema = z.object({
   flaws: z.string().max(4000).nullable().optional(),
   backstory: z.string().max(20000).nullable().optional(),
   notes: z.string().max(20000).nullable().optional(),
+  appearance: z.string().max(4000).nullable().optional(),
+  characteristics: z.string().max(4000).nullable().optional(),
   spellcastingJson: z.string().max(20000).optional(),
   defensesJson: z.string().max(4000).optional(),
 });

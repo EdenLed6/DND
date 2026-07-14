@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Cinzel, Crimson_Pro, Inter } from "next/font/google";
 import { PwaRegister } from "@/components/PwaRegister";
+import { DiceDock } from "@/components/DiceDock";
 
 // Self-hosted (downloaded at build, served from our origin) — no request to
 // Google's CDN on page load, so no visitor-IP leak and no CSP conflict.
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${cinzel.variable} ${crimson.variable} ${inter.variable}`}>
       <body className="min-h-[100dvh]">
         {children}
+        <DiceDock />
         <PwaRegister />
       </body>
     </html>

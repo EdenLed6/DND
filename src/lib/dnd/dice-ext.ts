@@ -1,5 +1,6 @@
 // Extended dice-expression parser & roller. See docs/SPEC-PLAYER.he.md §19.7.
-// Pure module, no dependencies, rng injectable for deterministic tests.
+// Pure module, rng injectable for deterministic tests (defaults to webcrypto).
+import { cryptoRandomInt } from "./dice";
 //
 // Grammar (whitespace-insensitive, case-insensitive):
 //   expression := [sign] term (('+' | '-') term)*
@@ -161,12 +162,14 @@ export function parseDiceExpression(expr: string): { valid: boolean; error?: str
 
 /**
  * Roll an extended dice expression. `rng` must return a float in [0, 1)
- * (defaults to Math.random). Throws Error on an invalid expression, with the
- * same message parseDiceExpression() reports.
+ * (defaults to a cryptographically-random source). Throws Error on an invalid
+ * expression, with the same message parseDiceExpression() reports.
  */
-export function rollExt(expr: string, rng: () => number = Math.random): ExtRollResult {
+export function rollExt(expr: string, rng?: () => number): ExtRollResult {
   const terms = parse(expr);
-  const rollOne = (sides: number) => Math.floor(rng() * sides) + 1;
+  const rollOne = rng
+    ? (sides: number) => Math.floor(rng() * sides) + 1
+    : (sides: number) => cryptoRandomInt(sides) + 1;
 
   const dice: ExtDie[] = [];
   let modifier = 0;

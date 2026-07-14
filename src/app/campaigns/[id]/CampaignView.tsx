@@ -90,6 +90,20 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
         <div className="card">
           {party.length === 0 && <p className="muted text-center text-sm">No characters yet. Players join with the invite code and create a character.</p>}
 
+          {/* Quick access to the current user's own characters, linked to their sheets. */}
+          {myCharacters.length > 0 && (
+            <div className="panel-inset mb-3 p-3">
+              <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#6a4f14]">My Characters</div>
+              <div className="flex flex-wrap gap-1.5">
+                {myCharacters.map((c) => (
+                  <Link key={c.id} href={`/characters/${c.id}`} className="chip chip-gold cursor-pointer" title="Open character sheet">
+                    {c.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Mobile: cards */}
           <div className="space-y-2 sm:hidden">
             {party.map((p) => (

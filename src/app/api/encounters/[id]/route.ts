@@ -36,13 +36,65 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const body = await req.json().catch(() => ({}));
   const op = body.op as string;
 
-  // Players may only move their own token; everything else is DM-only.
+  // ── Player-allowed combat actions ──────────────────────────────────────────
+  // A player may act only through/against combat using a combatant whose
+  // characterId they own (mirrors the moveToken ownership check). The DM may do
+  // all of these for any combatant.
+
+  /** True when the caller is the DM or owns the acting combatant's character. */
+  async function mayActAs(actingCombatantId: string): Promise<{ ok: boolean; combatant: any }> {
+    const combatant = await prisma.combatant.findFirst({ where: { id: actingCombatantId, encounterId: id } });
+    if (!combatant) return { ok: false, combatant: null };
+    if (dm) return { ok: true, combatant };
+    if (!combatant.characterId) return { ok: false, combatant };
+    const ch = await prisma.character.findUnique({ where: { id: combatant.characterId }, select: { ownerId: true } });
+    return { ok: ch?.ownerId === user!.id, combatant };
+  }
+
+  // Players may only move their own token; everything else below is gated.
   if (op === "moveToken") {
     const token = await prisma.token.findUnique({ where: { id: body.tokenId }, include: { character: true } });
     if (!token || token.encounterId !== id) return bad("Bad token");
     if (!dm && token.character?.ownerId !== user.id) return bad("Not your token", 403);
     const t = await combat.moveToken(id, body.tokenId, body.gridX, body.gridY);
     return NextResponse.json(t);
+  }
+
+  // Self initiative: a player rolls 1d20 + their combatant's dexMod; it sets the
+  // combatant's initiative and re-sorts the shared order (emits initiative:set).
+  if (op === "selfInitiative") {
+    const { ok, combatant } = await mayActAs(body.combatantId);
+    if (!combatant) return bad("Bad combatant");
+    if (!ok) return bad("Not your combatant", 403);
+    try {
+      const r = await combat.rollCombatantInitiative(id, combatant.id);
+      return NextResponse.json(r);
+    } catch (e: any) {
+      console.error(`[encounter ${id}] selfInitiative failed:`, e?.message ?? e);
+      return bad("Operation could not be completed", 400);
+    }
+  }
+
+  // Apply damage from an acting combatant to a target — the combat-affecting
+  // half of a player's attack or damaging spell. The client rolls to-hit / picks
+  // system-or-manual damage; the server just applies the chosen amount, attributed
+  // to the actor. NOTE: never returns the target's HP — that would leak exact
+  // enemy HP to players (the client refetches the role-filtered state instead).
+  if (op === "combatDamage") {
+    const amount = Math.floor(Number(body.amount));
+    if (!Number.isFinite(amount) || amount < 0 || amount > 999) return bad("Bad amount");
+    const { ok, combatant } = await mayActAs(body.actorCombatantId);
+    if (!combatant) return bad("Bad attacker");
+    if (!ok) return bad("Not your combatant", 403);
+    const label = typeof body.label === "string" ? body.label.slice(0, 80) : undefined;
+    const breakdown = typeof body.breakdown === "string" ? body.breakdown.slice(0, 120) : undefined;
+    try {
+      await combat.damageCombatant(id, body.targetId, amount, label, breakdown, combatant.name);
+      return NextResponse.json({ ok: true });
+    } catch (e: any) {
+      console.error(`[encounter ${id}] combatDamage failed:`, e?.message ?? e);
+      return bad("Operation could not be completed", 400);
+    }
   }
 
   if (!dm) return bad("DM only", 403);
@@ -60,6 +112,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         if ("imageUrl" in patch) patch.imageUrl = patch.imageUrl ? safeImageUrl(patch.imageUrl) : null;
         await combat.updateToken(id, body.tokenId, patch); break;
       }
+      case "addObject": {
+        const imageUrl = body.imageUrl ? safeImageUrl(body.imageUrl) : null;
+        await combat.addObject(id, { label: String(body.label ?? "Obj"), color: typeof body.color === "string" ? body.color : undefined, imageUrl, sizeSquares: body.sizeSquares });
+        break;
+      }
+      case "removeToken": await combat.removeObjectToken(id, body.tokenId); break;
       case "setFog": await combat.setFog(id, !!body.enabled); break;
       case "revealCells": await combat.revealCells(id, body.cells ?? [], body.reveal !== false); break;
       case "setAllCells": await combat.setAllCells(id, !!body.revealAll); break;

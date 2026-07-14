@@ -12,6 +12,12 @@ import { emitToCampaign } from "@/lib/realtime/io";
 const ATTITUDES = ["friendly", "neutral", "hostile", "unknown"] as const;
 
 const text = z.string().max(8000);
+// A NpcSheet stat block, serialized. Must be valid JSON when present so the
+// DM's NpcSheet component can parse it back. Empty string clears the block.
+const statBlock = z.string().max(8000).refine(
+  (s) => { if (s === "") return true; try { JSON.parse(s); return true; } catch { return false; } },
+  "statBlockJson must be valid JSON",
+);
 const fieldsSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(80),
   role: z.string().max(200).nullish(),
@@ -21,7 +27,7 @@ const fieldsSchema = z.object({
   portraitUrl: z.string().max(2000).nullish(),
   publicDesc: text.nullish(),
   secretDesc: text.nullish(),
-  statBlockJson: text.nullish(),
+  statBlockJson: statBlock.nullish(),
   status: z.string().max(80).nullish(),
   revealed: z.boolean().optional(),
 });

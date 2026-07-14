@@ -99,45 +99,77 @@ export async function loadCharacterView(id: string) {
   });
   if (!character) return null;
 
+  // ---- Item locations ----
+  // location is canonical ("equipped" | "backpack" | "pocket" | "storage"); the legacy
+  // `equipped` flag still marks pre-migration rows whose location defaulted to "backpack".
+  const locationOf = (i: { location?: string | null; equipped: boolean }): string =>
+    i.location === "equipped" || i.equipped ? "equipped" : (i.location ?? "backpack");
+  const CARRIED = new Set(["equipped", "backpack", "pocket"]); // storage weight is excluded
+
   // resolve equipped armor/shield/weapons + item weights from SRD equipment
-  const equippedItems = character.items.filter((i) => i.equipped && i.srcEquipmentId);
+  const equippedItems = character.items.filter((i) => locationOf(i) === "equipped");
   const srdBackedItems = character.items.filter((i) => i.srcEquipmentId);
   let equippedArmor: ArmorInput | null = null;
   let equippedArmorName: string | null = null;
   let equippedShield = false;
   const weapons: EquippedWeapon[] = [];
-  let equipWeight = 0; // total weight of SRD-equipment-backed items (× quantity)
+  const acContributors: { name: string; bonus: number }[] = []; // customJson.acBonus from equipped items
+  let equipWeight = 0; // total weight of carried items (× quantity); storage excluded
+  const byEquipId = new Map<number, any>();
   if (srdBackedItems.length) {
     const srdEquip = await prisma.srdEquipment.findMany({
       where: { id: { in: srdBackedItems.map((i) => Number(i.srcEquipmentId)).filter((n) => !isNaN(n)) } },
     });
-    const byEquipId = new Map(srdEquip.map((e) => [e.id, e]));
-    // Weight of everything carried (equipped or not).
-    for (const item of srdBackedItems) {
-      const e = byEquipId.get(Number(item.srcEquipmentId));
-      if (e?.weight) equipWeight += e.weight * (item.quantity ?? 1);
+    for (const e of srdEquip) byEquipId.set(e.id, e);
+  }
+  // Weight of everything carried (equipped, backpack, pockets) — SRD weight or customJson.weight.
+  for (const item of character.items) {
+    if (!CARRIED.has(locationOf(item))) continue;
+    const e = item.srcEquipmentId ? byEquipId.get(Number(item.srcEquipmentId)) : null;
+    const custom = safeJson<any>(item.customJson, {});
+    const w = e?.weight ?? (typeof custom.weight === "number" ? custom.weight : 0);
+    if (w) equipWeight += w * (item.quantity ?? 1);
+  }
+  // Armor/shield + attack list + AC equip effects only from equipped items.
+  for (const item of equippedItems) {
+    const custom = safeJson<any>(item.customJson, {});
+    if (typeof custom.acBonus === "number" && custom.acBonus !== 0) {
+      acContributors.push({ name: item.name, bonus: custom.acBonus });
     }
-    // Armor/shield + attack list only from equipped items.
-    for (const item of equippedItems) {
-      const e = byEquipId.get(Number(item.srcEquipmentId));
-      if (!e) continue;
+    const e = item.srcEquipmentId ? byEquipId.get(Number(item.srcEquipmentId)) : null;
+    if (e) {
       if (e.armorCategory && /shield/i.test(e.name)) equippedShield = true;
       else if (e.armorCategory && e.acBase != null) {
         equippedArmor = { armorCategory: e.armorCategory, acBase: e.acBase, acMaxBonus: e.acMaxBonus };
         equippedArmorName = e.name;
       }
-      if (!e.damageDice) continue;
-      const props = (e.weaponProperties ?? "").toLowerCase();
-      weapons.push({
-        name: item.name,
-        damageDice: e.damageDice,
-        damageType: e.damageType ?? "",
-        finesse: /finesse/.test(props),
-        // SRD melee weapons carry rangeNormal: 5, and thrown melee weapons use
-        // STR — the authoritative signal is the weaponRange column.
-        ranged: e.weaponRange === "Ranged" || /ammunition/.test(props),
-        properties: e.weaponProperties ?? "",
-      });
+      if (e.damageDice) {
+        const props = (e.weaponProperties ?? "").toLowerCase();
+        weapons.push({
+          name: item.name,
+          damageDice: e.damageDice,
+          damageType: e.damageType ?? "",
+          finesse: /finesse/.test(props),
+          // SRD melee weapons carry rangeNormal: 5, and thrown melee weapons use
+          // STR — the authoritative signal is the weaponRange column.
+          ranged: e.weaponRange === "Ranged" || /ammunition/.test(props),
+          properties: e.weaponProperties ?? "",
+        });
+      }
+      continue;
+    }
+    // Custom/homebrew equip effects: acBase turns the item into armor, category "shield" into a shield.
+    if (typeof custom.category === "string" && /shield/i.test(custom.category)) equippedShield = true;
+    else if (typeof custom.acBase === "number" && !equippedArmor) {
+      equippedArmor = {
+        armorCategory: custom.addDex ? (custom.maxDex != null ? "Medium Armor" : "Light Armor") : "Heavy Armor",
+        acBase: custom.acBase,
+        acMaxBonus: custom.maxDex ?? null,
+      };
+      equippedArmorName = item.name;
+    }
+    if (typeof custom.damage === "string" && custom.damage) {
+      weapons.push({ name: item.name, damageDice: custom.damage, damageType: "", finesse: false, ranged: false, properties: "" });
     }
   }
 
@@ -192,7 +224,12 @@ export async function loadCharacterView(id: string) {
   const features = await resolveFeatures(character);
   const derived = derive(input);
 
-  // ---- Encumbrance (uses standard rules; variant thresholds provided for the UI) ----
+  // Equip-effect AC bonuses (customJson.acBonus on equipped items) stack on top of
+  // computeAc()'s armor/shield math — unless a manual AC override is set.
+  const acItemBonus = acContributors.reduce((s, b) => s + b.bonus, 0);
+  if (character.acOverride == null && acItemBonus !== 0) derived.ac += acItemBonus;
+
+  // ---- Encumbrance (carried locations only — storage excluded; variant thresholds for the UI) ----
   const str = character.str;
   const encumbrance: Encumbrance = {
     totalWeight: Math.round(equipWeight * 10) / 10,
@@ -234,7 +271,7 @@ export async function loadCharacterView(id: string) {
 
   // ---- Speed & Defenses (SPEC-PLAYER §11) ----
   const defenses = parseDefenses(character.defensesJson);
-  const acBreakdown = buildAcBreakdown(input, derived.mods, equippedArmorName);
+  const acBreakdown = buildAcBreakdown(input, derived.mods, equippedArmorName, acContributors);
 
   return { character, derived, spellDetails, features, weapons, encumbrance, resources, senses, proficiencies, defenses, acBreakdown };
 }
@@ -263,10 +300,16 @@ function parseDefenses(raw: string | null | undefined): DefensesData {
 }
 
 /**
- * Human-readable AC breakdown that mirrors computeAc() in lib/dnd/character.ts:
- * "10 + DEX (+3)", "Chain Mail 16", "Leather 11 + DEX (+3) + Shield (+2)", …
+ * Human-readable AC breakdown that mirrors computeAc() in lib/dnd/character.ts,
+ * plus equipped-item bonuses: "10 + DEX (+3)", "Chain Mail 16 + Shield (+2)",
+ * "Chain Mail 16 + Shield (+2) + Cloak of Protection (+1)", …
  */
-function buildAcBreakdown(c: CharacterInput, mods: Record<Ability, number>, armorName: string | null): string {
+function buildAcBreakdown(
+  c: CharacterInput,
+  mods: Record<Ability, number>,
+  armorName: string | null,
+  itemBonuses: { name: string; bonus: number }[] = [],
+): string {
   if (c.acOverride != null) return `Manual override ${c.acOverride}`;
   const fmt = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
   let base: string;
@@ -286,6 +329,7 @@ function buildAcBreakdown(c: CharacterInput, mods: Record<Ability, number>, armo
     base = `10 + DEX (${fmt(mods.dex)})`;
   }
   if (c.equippedShield) base += " + Shield (+2)";
+  for (const b of itemBonuses) base += ` + ${b.name} (${fmt(b.bonus)})`;
   return base;
 }
 

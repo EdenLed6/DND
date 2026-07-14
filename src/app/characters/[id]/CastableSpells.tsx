@@ -3,7 +3,7 @@
 // PURE/CONTROLLED: rolls dice + calls parent callbacks to spend slots. No fetch here.
 import { useState } from "react";
 import type { SpellcastingInfo } from "@/lib/dnd/character";
-import { resolveCast } from "@/lib/dnd/spell-casting";
+import { isPreparedCaster, resolveCast } from "@/lib/dnd/spell-casting";
 import { rollToTray, rollAttackToTray, pushTrayEntry } from "@/components/DiceTray";
 
 interface CastableSpellsProps {
@@ -32,9 +32,12 @@ export function CastableSpells({
   onSpendSlot,
   onSpendPact,
 }: CastableSpellsProps) {
+  // Prepared casters cast only prepared (or always-prepared) spells; known
+  // casters (Bard/Sorcerer/Warlock/Ranger) can cast anything they know.
+  const prepares = isPreparedCaster(spellcasting.casterClass);
   const cantrips = spells.filter((s) => s.level === 0);
   const leveled = spells
-    .filter((s) => s.level > 0 && (s.prepared || s.alwaysPrepared))
+    .filter((s) => s.level > 0 && (!prepares || s.prepared || s.alwaysPrepared))
     .sort((a, b) => a.level - b.level || String(a.name).localeCompare(String(b.name)));
 
   const pactAvail = spellcasting.pact ? Math.max(0, spellcasting.pact.slots - pactUsed) : 0;
@@ -44,7 +47,8 @@ export function CastableSpells({
   }
 
   // Fire the roll for a resolved cast, then let the parent persist the spend.
-  function doCast(spell: any, chosenSlotLevel: number, viaPact: boolean) {
+  // Rituals take 10 extra minutes but consume no slot.
+  function doCast(spell: any, chosenSlotLevel: number, viaPact: boolean, asRitual = false) {
     const cast = resolveCast(spell.name, spell.level, chosenSlotLevel, characterLevel, abilityMod);
     if (cast.kind === "attack") {
       rollAttackToTray(`${spell.name}`, spellcasting.spellAttackBonus, cast.damageExpr ?? "", cast.damageType ?? "");
@@ -59,10 +63,13 @@ export function CastableSpells({
     } else if (cast.kind === "heal") {
       rollToTray(`${spell.name} (healing)`, cast.healExpr ?? "0", { extra: "healing" });
     } else {
-      pushTrayEntry({ label: spell.name, dice: [], total: 0, breakdown: "cast", extra: `Level ${chosenSlotLevel} slot spent` });
+      pushTrayEntry({
+        label: spell.name, dice: [], total: 0, breakdown: "cast",
+        extra: asRitual ? "cast as ritual — no slot spent" : `Level ${chosenSlotLevel} slot spent`,
+      });
     }
-    // Spend after rolling. Cantrips spend nothing.
-    if (spell.level > 0) {
+    // Spend after rolling. Cantrips and ritual casts spend nothing.
+    if (spell.level > 0 && !asRitual) {
       if (viaPact) onSpendPact();
       else onSpendSlot(chosenSlotLevel);
     }
@@ -74,13 +81,14 @@ export function CastableSpells({
     <div className="mt-3">
       <div className="mb-1 text-xs uppercase tracking-wide text-gold">Cast</div>
       {!hasCastables ? (
-        <p className="muted text-sm">No prepared spells or cantrips.</p>
+        <p className="muted text-sm">{prepares ? "No prepared spells or cantrips." : "No spells known or cantrips."}</p>
       ) : (
         <div className="space-y-1">
           {cantrips.map((spell) => (
             <div key={spell.id} className="flex items-center justify-between gap-2 text-sm">
               <span>
                 <b>{spell.name}</b> <span className="text-[11px] text-[#857866]">· cantrip</span>
+                {spell.ritual ? <span className="text-[11px] text-[#857866]"> (R)</span> : null}
                 {spell.concentration ? <span className="text-arcane"> · C</span> : null}
               </span>
               <button type="button" className="btn-ghost" disabled={!canUse}
@@ -118,7 +126,7 @@ function LeveledSpellRow({
   slotAvail: (level: number) => number;
   pactAvail: number;
   pactLevel: number;
-  onCast: (spell: any, chosenSlotLevel: number, viaPact: boolean) => void;
+  onCast: (spell: any, chosenSlotLevel: number, viaPact: boolean, asRitual?: boolean) => void;
 }) {
   // Build the list of castable options: normal slots at level >= spell.level with
   // availability, plus a pact-slot option when the pact level is high enough.
@@ -146,12 +154,13 @@ function LeveledSpellRow({
   }
 
   return (
-    <div className="flex items-center justify-between gap-2 text-sm">
-      <span>
+    <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+      <span className="min-w-0">
         <b>{spell.name}</b> <span className="text-[11px] text-[#857866]">· L{spell.level}</span>
+        {spell.ritual ? <span className="text-[11px] text-[#857866]"> (R)</span> : null}
         {spell.concentration ? <span className="text-arcane"> · C</span> : null}
       </span>
-      <span className="flex items-center gap-1">
+      <span className="flex shrink-0 items-center gap-1">
         <select
           className="input"
           value={effective}
@@ -167,6 +176,11 @@ function LeveledSpellRow({
         </select>
         <button type="button" className="btn-ghost" disabled={!canUse || noSlots}
           onClick={cast} title={noSlots ? "No slots available" : `Cast ${spell.name}`}>Cast</button>
+        {spell.ritual && (
+          <button type="button" className="btn-ghost" disabled={!canUse}
+            onClick={() => onCast(spell, spell.level, false, true)}
+            title={`Cast ${spell.name} as a ritual (+10 minutes, no slot)`}>Ritual</button>
+        )}
       </span>
     </div>
   );

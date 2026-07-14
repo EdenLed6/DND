@@ -188,3 +188,95 @@ export function resolveCast(
 export function isCastable(name: string): boolean {
   return !!CAST[name.trim().toLowerCase()];
 }
+
+// ---------------------------------------------------------------------------
+// 5e preparation & spell-slot spending helpers
+// ---------------------------------------------------------------------------
+
+/** Classes that prepare spells each day (vs. "known" casters like Bard/Sorcerer/Warlock/Ranger). */
+export const PREPARED_CASTERS = ["Cleric", "Druid", "Paladin", "Wizard"] as const;
+
+export function isPreparedCaster(className: string | null | undefined): boolean {
+  return !!className && (PREPARED_CASTERS as readonly string[]).includes(className);
+}
+
+/** Daily prepare limit: spellcasting ability modifier + class level, minimum 1. */
+export function prepareLimit(classLevel: number, castingAbilityMod: number): number {
+  return Math.max(1, classLevel + castingAbilityMod);
+}
+
+export interface PactInfo { slots: number; level: number }
+
+/** Highest spell level the character can cast with current slot totals (incl. pact). */
+export function maxCastableSpellLevel(slots: number[], pact: PactInfo | null | undefined): number {
+  let max = 0;
+  for (let i = 0; i < slots.length; i++) if (slots[i] > 0) max = i + 1;
+  if (pact && pact.slots > 0) max = Math.max(max, pact.level);
+  return max;
+}
+
+/**
+ * Parse a character's spellcastingJson blob.
+ * Shape: {slotsUsed:{"1":0,...}, pactUsed} — `pactSlotsUsed` accepted as a legacy alias on read.
+ */
+export function parseSlotState(json: string | null | undefined): {
+  obj: Record<string, unknown>;
+  slotsUsed: Record<string, number>;
+  pactUsed: number;
+} {
+  let obj: Record<string, unknown> = {};
+  try {
+    const parsed = JSON.parse(json || "{}");
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) obj = parsed;
+  } catch { /* keep empty */ }
+  const rawUsed = obj.slotsUsed;
+  const slotsUsed: Record<string, number> = {};
+  if (rawUsed && typeof rawUsed === "object" && !Array.isArray(rawUsed)) {
+    for (const [k, v] of Object.entries(rawUsed as Record<string, unknown>)) {
+      const n = Number(v);
+      if (!isNaN(n)) slotsUsed[k] = n;
+    }
+  }
+  const pactUsed = Number(obj.pactUsed ?? (obj as { pactSlotsUsed?: unknown }).pactSlotsUsed ?? 0) || 0;
+  return { obj, slotsUsed, pactUsed };
+}
+
+/** Remaining castable slots at exactly `level` (regular + pact slots of that level). */
+export function slotsRemainingAt(
+  json: string | null | undefined,
+  level: number,
+  totals: number[],
+  pact: PactInfo | null | undefined,
+): number {
+  const { slotsUsed, pactUsed } = parseSlotState(json);
+  let rem = Math.max(0, (totals[level - 1] ?? 0) - (slotsUsed[level] ?? 0));
+  if (pact && pact.level === level) rem += Math.max(0, pact.slots - pactUsed);
+  return rem;
+}
+
+/**
+ * Spend one slot at `level`. Prefers a regular slot; falls back to a pact slot
+ * when the pact-slot level matches. Returns the updated JSON blob and the
+ * number of slots still remaining at that level, or ok:false when none left.
+ */
+export function trySpendSlot(
+  json: string | null | undefined,
+  level: number,
+  totals: number[],
+  pact: PactInfo | null | undefined,
+): { ok: true; json: string; slotsRemaining: number } | { ok: false } {
+  const { obj, slotsUsed, pactUsed } = parseSlotState(json);
+  const regularTotal = totals[level - 1] ?? 0;
+  const regularUsed = slotsUsed[level] ?? 0;
+  const pactRemaining = pact && pact.level === level ? Math.max(0, pact.slots - pactUsed) : 0;
+
+  if (regularTotal - regularUsed > 0) {
+    obj.slotsUsed = { ...slotsUsed, [level]: regularUsed + 1 };
+    return { ok: true, json: JSON.stringify(obj), slotsRemaining: Math.max(0, regularTotal - regularUsed - 1) + pactRemaining };
+  }
+  if (pactRemaining > 0) {
+    obj.pactUsed = pactUsed + 1;
+    return { ok: true, json: JSON.stringify(obj), slotsRemaining: pactRemaining - 1 };
+  }
+  return { ok: false };
+}

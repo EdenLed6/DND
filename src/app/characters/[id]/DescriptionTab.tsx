@@ -2,19 +2,33 @@
 import { useState } from "react";
 
 interface DescriptionCharacter {
+  appearance?: string | null;
   personality?: string | null;
   ideals?: string | null;
   bonds?: string | null;
   flaws?: string | null;
+  characteristics?: string | null;
   backstory?: string | null;
   notes?: string | null;
 }
 
-const FIELDS: { key: keyof DescriptionCharacter; label: string; rows: number }[] = [
+const FIELDS: { key: keyof DescriptionCharacter; label: string; rows: number; placeholder?: string }[] = [
+  {
+    key: "appearance",
+    label: "Appearance",
+    rows: 3,
+    placeholder: "Age, height, weight, eyes, hair, skin...",
+  },
   { key: "personality", label: "Personality Traits", rows: 3 },
   { key: "ideals", label: "Ideals", rows: 2 },
   { key: "bonds", label: "Bonds", rows: 2 },
   { key: "flaws", label: "Flaws", rows: 2 },
+  {
+    key: "characteristics",
+    label: "Additional Characteristics",
+    rows: 3,
+    placeholder: "Allies, organizations, treasured possessions, quirks...",
+  },
   { key: "backstory", label: "Backstory", rows: 5 },
   { key: "notes", label: "Notes", rows: 3 },
 ];
@@ -38,6 +52,7 @@ export function DescriptionTab({
             field={f.key}
             label={f.label}
             rows={f.rows}
+            placeholder={f.placeholder}
             value={character[f.key] ?? ""}
             canEdit={canEdit}
             onSave={onSave}
@@ -52,6 +67,7 @@ function DescriptionField({
   field,
   label,
   rows,
+  placeholder,
   value,
   canEdit,
   onSave,
@@ -59,6 +75,7 @@ function DescriptionField({
   field: string;
   label: string;
   rows: number;
+  placeholder?: string;
   value: string;
   canEdit: boolean;
   onSave: (field: string, value: string) => void;
@@ -84,6 +101,7 @@ function DescriptionField({
       <textarea
         className="input"
         rows={rows}
+        placeholder={placeholder}
         value={local}
         onChange={(e) => setLocal(e.target.value)}
         onBlur={() => { if (local !== value) onSave(field, local); }}

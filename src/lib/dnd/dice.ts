@@ -11,8 +11,25 @@ export interface RollResult {
   fumble?: boolean;  // natural 1 on a single d20
 }
 
+/**
+ * Cryptographically-random die roll (uniform via rejection sampling).
+ * Works in both Node (>=18, global webcrypto) and browsers. Falls back to
+ * Math.random only if webcrypto is unavailable.
+ */
+export function cryptoRandomInt(maxExclusive: number): number {
+  const c: Crypto | undefined = (globalThis as any).crypto;
+  if (c?.getRandomValues) {
+    const limit = Math.floor(0x100000000 / maxExclusive) * maxExclusive;
+    const buf = new Uint32Array(1);
+    let v: number;
+    do { c.getRandomValues(buf); v = buf[0]; } while (v >= limit);
+    return v % maxExclusive;
+  }
+  return Math.floor(Math.random() * maxExclusive);
+}
+
 function rollOne(sides: number): number {
-  return Math.floor(Math.random() * sides) + 1;
+  return cryptoRandomInt(sides) + 1;
 }
 
 /** Roll a dice expression like "2d6+3", "1d20-1", "d8", "3". */

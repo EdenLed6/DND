@@ -70,11 +70,19 @@ export function SessionsTab({ campaignId, isDM }: { campaignId: string; isDM: bo
 
   return (
     <div className="space-y-3">
-      {isDM && (
-        <div className="flex justify-end">
-          <button className="btn-gold" disabled={busy} onClick={() => op({ op: "create" })}>+ New Session</button>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="font-display text-xl text-gold">📜 Session Log</h2>
+          <p className="muted text-xs">
+            {isDM
+              ? "Plan sessions, run them live, and publish recaps. Prep notes and the DM recap stay behind the screen."
+              : "Recaps of your adventures so far. The live session is pinned to the top."}
+          </p>
         </div>
-      )}
+        {isDM && (
+          <button className="btn-gold" disabled={busy} onClick={() => op({ op: "create" })}>+ New Session</button>
+        )}
+      </div>
 
       {loaded && ordered.length === 0 && (
         <div className="card"><p className="muted text-center text-sm">
@@ -108,10 +116,15 @@ export function SessionsTab({ campaignId, isDM }: { campaignId: string; isDM: bo
             </div>
           </div>
 
-          {s.recapPlayer && (
-            <p className="text-sm text-[#5e5448]">
+          {s.recapPlayer ? (
+            <div className="whitespace-pre-wrap text-sm text-[#5e5448]">
+              <span className="mr-1 font-semibold text-[#6a4f14]">Recap:</span>
               {s.recapPlayer.length > 220 && editing !== s.id ? `${s.recapPlayer.slice(0, 220)}…` : s.recapPlayer}
-            </p>
+            </div>
+          ) : (
+            s.status === "DONE" && editing !== s.id && (
+              <p className="muted text-xs italic">No recap published yet.</p>
+            )
           )}
 
           {s.agenda.length > 0 && editing !== s.id && (

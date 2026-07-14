@@ -59,7 +59,6 @@ const ITEMS = [
   { href: "/dashboard", label: "Characters", icon: <PersonIcon /> },
   { href: "/dashboard#campaigns", label: "Campaigns", icon: <BannerIcon />, activePath: "/campaigns" },
   { href: "/compendium", label: "Compendium", icon: <BookIcon /> },
-  { href: "/dice", label: "Dice", icon: <D20Icon /> },
   { href: "/profile", label: "Profile", icon: <GearIcon /> },
 ];
 

@@ -11,10 +11,12 @@ import { getIO, rooms } from "@/lib/realtime/io";
 // READ notes explicitly shared with them (sharedWithDm=true); the DM can never
 // create, edit, or delete a player's notes.
 
-const CATEGORIES = ["General", "Session", "NPCs", "Locations", "Quests", "Secrets", "Rules"] as const;
+// Categories are dynamic tabs: a fixed set of defaults plus any custom tab
+// names the player creates ("+ New tab" in the UI). Stored as free strings.
+const categorySchema = z.string().trim().min(1).max(30);
 
 const createSchema = z.object({
-  category: z.enum(CATEGORIES).default("General"),
+  category: categorySchema.default("General"),
   title: z.string().max(120).default(""),
   body: z.string().max(8000).default(""),
   pinned: z.boolean().optional(),
@@ -23,11 +25,18 @@ const createSchema = z.object({
 
 const patchSchema = z.object({
   noteId: z.string().min(1),
-  category: z.enum(CATEGORIES).optional(),
+  category: categorySchema.optional(),
   title: z.string().max(120).optional(),
   body: z.string().max(8000).optional(),
   pinned: z.boolean().optional(),
   sharedWithDm: z.boolean().optional(),
+});
+
+// Tab management: rename a category across all of its notes.
+const renameSchema = z.object({
+  op: z.literal("renameCategory"),
+  from: categorySchema,
+  to: categorySchema,
 });
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -64,7 +73,7 @@ export async function GET(req: Request, { params }: Ctx) {
     where: {
       characterId: id,
       ...(dmView ? { sharedWithDm: true } : {}),
-      ...(category && (CATEGORIES as readonly string[]).includes(category) ? { category } : {}),
+      ...(category && categorySchema.safeParse(category).success ? { category } : {}),
     },
     orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
   });
@@ -114,7 +123,21 @@ export async function PATCH(req: Request, { params }: Ctx) {
   if (!character) return bad("Character not found", 404);
   if (character.ownerId !== user.id) return bad("Only the character's owner can edit notes", 403);
 
-  const parsed = patchSchema.safeParse(await req.json().catch(() => null));
+  const raw = await req.json().catch(() => null);
+
+  // Tab rename op: retag every note in a category (used by dynamic note tabs).
+  if (raw && typeof raw === "object" && (raw as { op?: unknown }).op === "renameCategory") {
+    const op = renameSchema.safeParse(raw);
+    if (!op.success) return bad("Invalid input");
+    const { from, to } = op.data;
+    const updated = await prisma.characterNote.updateMany({
+      where: { characterId: id, category: from },
+      data: { category: to },
+    });
+    return NextResponse.json({ ok: true, count: updated.count });
+  }
+
+  const parsed = patchSchema.safeParse(raw);
   if (!parsed.success) return bad("Invalid input");
   const { noteId, ...fields } = parsed.data;
 
@@ -136,8 +159,17 @@ export async function DELETE(req: Request, { params }: Ctx) {
   if (!character) return bad("Character not found", 404);
   if (character.ownerId !== user.id) return bad("Only the character's owner can delete notes", 403);
 
-  const noteId = new URL(req.url).searchParams.get("noteId");
-  if (!noteId) return bad("noteId is required");
+  const url = new URL(req.url);
+  const noteId = url.searchParams.get("noteId");
+  const category = url.searchParams.get("category");
+
+  // Tab delete: remove every note in a category (UI confirms first).
+  if (!noteId && category) {
+    if (!categorySchema.safeParse(category).success) return bad("Invalid category");
+    const deleted = await prisma.characterNote.deleteMany({ where: { characterId: id, category } });
+    return NextResponse.json({ ok: true, count: deleted.count });
+  }
+  if (!noteId) return bad("noteId or category is required");
 
   const existing = await prisma.characterNote.findUnique({ where: { id: noteId } });
   if (!existing || existing.characterId !== id) return bad("Note not found", 404);

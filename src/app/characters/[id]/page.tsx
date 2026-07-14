@@ -40,7 +40,6 @@ export default async function CharacterPage({ params }: { params: Promise<{ id: 
         isDM={isDM}
         isOwner={isOwner}
       />
-      <DiceTray />
       {view.character.campaignId && (
         <RollFeedListener campaignId={view.character.campaignId} selfName={user.displayName} characterName={view.character.name} />
       )}

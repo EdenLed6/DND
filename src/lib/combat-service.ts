@@ -244,6 +244,59 @@ export async function moveToken(encounterId: string, tokenId: string, gridX: num
   return t;
 }
 
+/**
+ * Roll initiative for a SINGLE combatant (1d20 + its stored dexMod) and re-sort
+ * the shared order. Used for a player rolling their own initiative — the result
+ * syncs into the initiative order the DM and everyone else sees (initiative:set).
+ */
+export async function rollCombatantInitiative(encounterId: string, combatantId: string) {
+  const c = await prisma.combatant.findFirst({ where: { id: combatantId, encounterId } });
+  if (!c) throw new Error("combatant not in this encounter");
+  let dexMod = 0;
+  try { dexMod = JSON.parse(c.statBlockJson || "{}").dexMod ?? 0; } catch {}
+  const r = roll("1d20");
+  const init = r.total + dexMod;
+  await prisma.combatant.update({ where: { id: c.id }, data: { initiative: init } });
+  emitToEncounter(encounterId, "initiative:set", { encounterId });
+  await log(encounterId, c.name, `rolled initiative: ${init} (d20 ${r.total}${dexMod ? ` ${dexMod >= 0 ? "+" : "−"} ${Math.abs(dexMod)}` : ""})`);
+  return { initiative: init };
+}
+
+/**
+ * Place a non-combatant "object" marker on the map (a Token with no combatantId
+ * and no characterId) — e.g. a chest, brazier, difficult-terrain marker.
+ */
+export async function addObject(
+  encounterId: string,
+  opts: { label: string; color?: string; imageUrl?: string | null; gridX?: number; gridY?: number; sizeSquares?: number },
+) {
+  const enc = await prisma.encounter.findUnique({ where: { id: encounterId }, include: { map: true } });
+  if (!enc) throw new Error("no encounter");
+  const t = await prisma.token.create({
+    data: {
+      encounterId, combatantId: null, characterId: null,
+      label: (opts.label || "Obj").slice(0, 12),
+      color: opts.color || "#6b7280",
+      imageUrl: opts.imageUrl ?? null,
+      gridX: opts.gridX ?? Math.floor((enc.map?.gridCols ?? 10) / 2),
+      gridY: opts.gridY ?? Math.floor((enc.map?.gridRows ?? 8) / 2),
+      sizeSquares: Math.max(1, Math.min(4, opts.sizeSquares ?? 1)),
+    },
+  });
+  emitToEncounter(encounterId, "combatants:changed", { encounterId });
+  await log(encounterId, "DM", `Placed object: ${t.label}`);
+  return t;
+}
+
+/** Remove a map object (only tokens with no combatant — never a creature token). */
+export async function removeObjectToken(encounterId: string, tokenId: string) {
+  const t = await prisma.token.findFirst({ where: { id: tokenId, encounterId } });
+  if (!t) throw new Error("token not in this encounter");
+  if (t.combatantId) throw new Error("not an object token");
+  await prisma.token.delete({ where: { id: t.id } });
+  emitToEncounter(encounterId, "combatants:changed", { encounterId });
+}
+
 /** Toggle fog of war on/off for an encounter. */
 export async function setFog(encounterId: string, enabled: boolean) {
   await prisma.encounter.update({ where: { id: encounterId }, data: { fogEnabled: enabled } });
@@ -284,6 +337,7 @@ export async function setAllCells(encounterId: string, revealAll: boolean) {
  */
 export async function damageCombatant(
   encounterId: string, combatantId: string, amount: number, label?: string, breakdown?: string,
+  actor: string = "DM",
 ) {
   const c = await prisma.combatant.findFirst({ where: { id: combatantId, encounterId } });
   if (!c) throw new Error("combatant not in this encounter");
@@ -291,7 +345,7 @@ export async function damageCombatant(
   const after = applyDamage(c.currentHp, c.tempHp, amount);
   await updateCombatant(encounterId, combatantId, { currentHp: after.currentHp, tempHp: after.tempHp });
   await log(
-    encounterId, "DM",
+    encounterId, actor,
     `${c.name} takes ${amount} damage${label ? ` from ${label}` : ""}${breakdown ? ` (${breakdown})` : ""}${after.dropped ? " and drops to 0 HP!" : ""}`,
     { kind: "damage", combatantId, hpBefore: c.currentHp, hpAfter: after.currentHp, tempBefore: c.tempHp, tempAfter: after.tempHp, amount },
   );

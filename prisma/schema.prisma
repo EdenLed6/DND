@@ -81,6 +81,7 @@ model Campaign {
   auditLogs  AuditLog[]
   homebrewMonsters HomebrewMonster[]
   invites    CampaignInvite[]
+  worldPages WorldPage[]
 }
 
 // Email invitation — joining a campaign requires BOTH a pending invite for the
@@ -329,6 +330,8 @@ model Character {
   flaws       String?
   backstory   String?
   notes       String?
+  appearance      String? // age, height, weight, eyes, hair, skin — free text or JSON
+  characteristics String? // background characteristics beyond personality/ideals/bonds/flaws
 
   // json blobs
   proficienciesJson String @default("{}") // {languages,tools,weapons,armor,skillChoices}
@@ -348,10 +351,90 @@ model Character {
   resources CharacterResource[]
   tokens    Token[]
   playerNotes CharacterNote[]
+  companions  Companion[]
 }
 
 // Player notes (SPEC-PLAYER §14): categorized, pinnable, optionally shared
 // with the DM. Private notes are never returned to other users.
+// Companion / summoned creature sheet (familiar, wild shape, summon, mount).
+// A mini stat block owned by a character; statJson holds the full block
+// (abilities, ac, speed, senses, actions, traits) in the HomebrewMonster shape.
+model Companion {
+  id          String    @id @default(cuid())
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  name        String
+  kind        String    @default("summon") // familiar | wildshape | summon | mount | other
+  srcMonsterId Int?     // optional SRD monster this was created from
+  statJson    String    @default("{}")
+  currentHp   Int       @default(1)
+  maxHp       Int       @default(1)
+  notes       String?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  @@index([characterId])
+}
+
+// DM-authored world/lore pages with per-page visibility (public | dm).
+// The World tab renders these as custom tabs the DM creates.
+model WorldPage {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  title      String
+  content    String   @default("")
+  visibility String   @default("dm") // public | dm
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([campaignId, sortOrder])
+}
+
+// Homebrew spells & items (DM content manager). dataJson mirrors the SRD
+// shapes (SrdSpell / SrdEquipment) so pickers can merge them seamlessly.
+model HomebrewSpell {
+  id         String   @id @default(cuid())
+  ownerId    String
+  campaignId String?
+  name       String
+  dataJson   String   @default("{}")
+  createdAt  DateTime @default(now())
+
+  @@index([ownerId])
+  @@index([campaignId])
+}
+
+model HomebrewItem {
+  id         String   @id @default(cuid())
+  ownerId    String
+  campaignId String?
+  name       String
+  dataJson   String   @default("{}") // {category, costGp, weight, desc, acBonus, damage, ...}
+  createdAt  DateTime @default(now())
+
+  @@index([ownerId])
+  @@index([campaignId])
+}
+
+// Persistent roll history (character sheet "roll log" + campaign feed source).
+model RollLog {
+  id          String   @id @default(cuid())
+  userId      String
+  characterId String?
+  campaignId  String?
+  label       String   @default("")
+  expression  String?
+  total       Int
+  breakdown   String   @default("")
+  visibility  String   @default("public") // public | dm | self
+  ts          DateTime @default(now())
+
+  @@index([characterId, ts])
+  @@index([campaignId, ts])
+}
+
 model CharacterNote {
   id           String    @id @default(cuid())
   characterId  String
@@ -422,7 +505,8 @@ model InventoryItem {
   quantity       Int       @default(1)
   equipped       Boolean   @default(false)
   attuned        Boolean   @default(false)
-  customJson     String?
+  location       String    @default("backpack") // equipped | backpack | pocket | storage
+  customJson     String? // {acBonus, acBase, addDex, damage, notes, ...} — equip effects
   character      Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
 }
 

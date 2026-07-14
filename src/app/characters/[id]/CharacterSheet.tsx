@@ -18,6 +18,9 @@ import { RestPanel } from "./RestPanel";
 import { SensesPanel } from "./SensesPanel";
 import { ProficienciesPanel } from "./ProficienciesPanel";
 import { DescriptionTab } from "./DescriptionTab";
+import { CompanionsTab } from "./CompanionsTab";
+import { RollLogPanel } from "./RollLogPanel";
+import { setRollCharacter } from "@/components/DiceTray";
 import { EncumbranceBar } from "./EncumbranceBar";
 import { CharacterHeader } from "./CharacterHeader";
 import { ActionsSection } from "./ActionsSection";
@@ -34,7 +37,7 @@ const CONDITIONS = ["Blinded","Charmed","Deafened","Frightened","Grappled","Inca
 type MergedResource = DerivedResource & { used: number };
 
 // Section navigation (spec §3.3, mapped to existing content).
-type SectionId = "overview" | "abilities" | "skills" | "actions" | "spells" | "inventory" | "features" | "proficiencies" | "background" | "notes";
+type SectionId = "overview" | "abilities" | "skills" | "actions" | "spells" | "inventory" | "features" | "proficiencies" | "creatures" | "background" | "notes";
 const ALL_SECTIONS: { id: SectionId; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "abilities", label: "Abilities & Saves" },
@@ -44,6 +47,7 @@ const ALL_SECTIONS: { id: SectionId; label: string }[] = [
   { id: "inventory", label: "Inventory" },
   { id: "features", label: "Features" },
   { id: "proficiencies", label: "Proficiencies" },
+  { id: "creatures", label: "Creatures" },
   { id: "background", label: "Background" },
   { id: "notes", label: "Notes" },
 ];
@@ -78,6 +82,13 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
     if (h && sections.some((s) => s.id === h)) setSection(h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Register this character as the active roll context so every dice roll (from
+  // the sheet, the global tray, or combat) is persisted to its roll log.
+  useEffect(() => {
+    setRollCharacter(c.id);
+    return () => setRollCharacter(null);
+  }, [c.id]);
   function selectSection(id: SectionId) {
     setSection(id);
     history.replaceState(null, "", `#${id}`);
@@ -613,13 +624,20 @@ export function CharacterSheet({ initialCharacter, derived, spellDetails, featur
 
       {section === "proficiencies" && <div className="max-w-2xl">{renderProficiencies()}</div>}
 
+      {section === "creatures" && (
+        <div className="max-w-4xl">
+          <CompanionsTab characterId={c.id} canEdit={canEditDef} />
+        </div>
+      )}
+
       {section === "background" && (
         <DescriptionTab character={c} canEdit={canEditDef} onSave={saveDescription} />
       )}
 
       {section === "notes" && (
-        <div className="max-w-3xl">
+        <div className="max-w-3xl space-y-4">
           <NotesSection characterId={c.id} canUse={canUse} isOwner={isOwner} isDM={isDM} />
+          <RollLogPanel characterId={c.id} />
         </div>
       )}
 

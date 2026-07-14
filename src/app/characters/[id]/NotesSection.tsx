@@ -1,9 +1,10 @@
 "use client";
-// Player notes (SPEC-PLAYER §14) — categories, pin, share-with-DM, search.
+// Player notes (SPEC-PLAYER §14) — dynamic tabs (fixed defaults + custom
+// categories), pin, share-with-DM, search.
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-const CATEGORIES = ["General", "Session", "NPCs", "Locations", "Quests", "Secrets", "Rules"] as const;
-type Category = (typeof CATEGORIES)[number];
+const DEFAULT_CATEGORIES = ["General", "Session", "NPCs", "Locations", "Quests", "Secrets", "Rules"] as const;
+const MAX_TAB_NAME = 30;
 
 type Note = {
   id: string;
@@ -33,6 +34,10 @@ function fmtDate(iso: string) {
     " " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
+function isDefaultTab(name: string): boolean {
+  return (DEFAULT_CATEGORIES as readonly string[]).includes(name);
+}
+
 export function NotesSection({ characterId, canUse, isOwner, isDM }: {
   characterId: string; canUse: boolean; isOwner: boolean; isDM: boolean;
 }) {
@@ -45,10 +50,13 @@ export function NotesSection({ characterId, canUse, isOwner, isDM }: {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"All" | Category>("All");
+  const [filter, setFilter] = useState<string>("All");
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [editing, setEditing] = useState<Note | "new" | null>(null);
+  const [editing, setEditing] = useState<{ note: Note | null; initialCategory?: string } | null>(null);
+  // Custom tabs created this session that don't have a note yet — merged with
+  // the categories actually present on notes so an empty new tab still shows.
+  const [pendingTabs, setPendingTabs] = useState<string[]>([]);
 
   const refresh = useCallback(async () => {
     try {
@@ -70,6 +78,20 @@ export function NotesSection({ characterId, canUse, isOwner, isDM }: {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  // Tabs = fixed defaults + every distinct category present on notes + pending
+  // custom tabs, deduplicated; customs listed after the defaults, sorted.
+  const tabs = useMemo(() => {
+    const custom = new Set<string>();
+    for (const n of notes) if (!isDefaultTab(n.category)) custom.add(n.category);
+    for (const t of pendingTabs) if (!isDefaultTab(t)) custom.add(t);
+    return [...DEFAULT_CATEGORIES, ...[...custom].sort((a, b) => a.localeCompare(b))];
+  }, [notes, pendingTabs]);
+
+  // If the selected tab vanished (tab deleted / rename elsewhere), fall back.
+  useEffect(() => {
+    if (filter !== "All" && !tabs.includes(filter)) setFilter("All");
+  }, [tabs, filter]);
+
   async function patchNote(noteId: string, fields: Partial<Pick<Note, "pinned" | "sharedWithDm">>) {
     await fetch(`/api/characters/${characterId}/notes`, {
       method: "PATCH",
@@ -83,6 +105,57 @@ export function NotesSection({ characterId, canUse, isOwner, isDM }: {
     refresh();
   }
 
+  function promptTabName(message: string, initial = ""): string | null {
+    const raw = window.prompt(message, initial);
+    if (raw == null) return null;
+    const name = raw.trim().slice(0, MAX_TAB_NAME);
+    if (!name) return null;
+    return name;
+  }
+
+  function newTab() {
+    const name = promptTabName(`Tab name (max ${MAX_TAB_NAME} characters):`);
+    if (!name) return;
+    if (tabs.includes(name)) { setFilter(name); return; }
+    setPendingTabs((prev) => [...prev, name]);
+    setFilter(name);
+    // Create the tab's first note right away — a tab exists through its notes.
+    setEditing({ note: null, initialCategory: name });
+  }
+
+  async function renameTab(from: string) {
+    const to = promptTabName(`Rename tab "${from}" to:`, from);
+    if (!to || to === from) return;
+    if (isDefaultTab(to) || tabs.includes(to)) {
+      window.alert(`A tab named "${to}" already exists.`);
+      return;
+    }
+    const hasNotes = notes.some((n) => n.category === from);
+    if (hasNotes) {
+      await fetch(`/api/characters/${characterId}/notes`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ op: "renameCategory", from, to }),
+      });
+    }
+    setPendingTabs((prev) => [...prev.filter((t) => t !== from), ...(hasNotes ? [] : [to])]);
+    setFilter(to);
+    refresh();
+  }
+
+  async function deleteTab(name: string) {
+    const inTab = notes.filter((n) => n.category === name);
+    if (inTab.length > 0) {
+      const ok = window.confirm(
+        `Delete tab "${name}" and its ${inTab.length} note${inTab.length === 1 ? "" : "s"}? This cannot be undone.`);
+      if (!ok) return;
+      await fetch(`/api/characters/${characterId}/notes?category=${encodeURIComponent(name)}`, { method: "DELETE" });
+    }
+    setPendingTabs((prev) => prev.filter((t) => t !== name));
+    setFilter("All");
+    refresh();
+  }
+
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     return notes.filter((n) =>
@@ -92,25 +165,44 @@ export function NotesSection({ characterId, canUse, isOwner, isDM }: {
 
   if (!isOwner && !isDM) return null;
 
+  const customTabSelected = filter !== "All" && !isDefaultTab(filter);
+
   return (
     <div>
-      {/* Header: filters + new + search */}
+      {/* Header: tabs + new tab + new note + search */}
       <div className="mb-2 flex flex-wrap items-center gap-1">
-        {(["All", ...CATEGORIES] as const).map((c) => (
+        {["All", ...tabs].map((c) => (
           <button key={c} onClick={() => setFilter(c)}
             className="chip cursor-pointer"
             style={filter === c ? { background: "var(--blood)", borderColor: "var(--wine-dark)", color: "#fff" } : undefined}>
             {c}
           </button>
         ))}
+        {editable && (
+          <button className="chip cursor-pointer opacity-80" title="Create a custom note tab" onClick={newTab}>
+            + New tab
+          </button>
+        )}
         <div className="ml-auto flex items-center gap-1">
           <input className="input !w-40 !py-1 text-sm" placeholder="Search notes..."
             value={search} onChange={(e) => setSearch(e.target.value)} />
           {editable && (
-            <button className="btn-primary !py-1 text-sm" onClick={() => setEditing("new")}>+ New Note</button>
+            <button className="btn-primary !py-1 text-sm"
+              onClick={() => setEditing({ note: null, initialCategory: filter !== "All" ? filter : undefined })}>
+              + New Note
+            </button>
           )}
         </div>
       </div>
+
+      {/* Custom tab management */}
+      {editable && customTabSelected && (
+        <div className="mb-2 flex items-center gap-2 text-xs">
+          <span className="text-[#5e5448]">Custom tab &ldquo;{filter}&rdquo;</span>
+          <button className="btn-ghost !px-1.5 !py-0 text-xs" onClick={() => renameTab(filter)}>Rename tab</button>
+          <button className="text-xs text-[#5e5448] hover:text-red-700" onClick={() => deleteTab(filter)}>Delete tab</button>
+        </div>
+      )}
 
       {dmView && (
         <p className="mb-2 text-xs text-[#5e5448]">Shared by the player — read-only.</p>
@@ -123,10 +215,18 @@ export function NotesSection({ characterId, canUse, isOwner, isDM }: {
           <p className="text-sm text-[#5e5448]">
             {notes.length === 0
               ? (dmView ? "The player hasn't shared any notes with you yet." : "No notes yet — your adventures deserve a chronicle.")
-              : "No notes match your search."}
+              : customTabSelected && !notes.some((n) => n.category === filter)
+                ? `The "${filter}" tab is empty — add its first note.`
+                : "No notes match your search."}
           </p>
           {editable && notes.length === 0 && (
-            <button className="btn-ghost mt-2 text-sm" onClick={() => setEditing("new")}>Write your first note</button>
+            <button className="btn-ghost mt-2 text-sm" onClick={() => setEditing({ note: null })}>Write your first note</button>
+          )}
+          {editable && notes.length > 0 && customTabSelected && !notes.some((n) => n.category === filter) && (
+            <button className="btn-ghost mt-2 text-sm"
+              onClick={() => setEditing({ note: null, initialCategory: filter })}>
+              Add a note to &ldquo;{filter}&rdquo;
+            </button>
           )}
         </div>
       )}
@@ -162,7 +262,7 @@ export function NotesSection({ characterId, canUse, isOwner, isDM }: {
                   )}
                   {editable && (
                     <>
-                      <button className="btn-ghost !px-1.5 !py-0 text-xs" onClick={() => setEditing(n)}>Edit</button>
+                      <button className="btn-ghost !px-1.5 !py-0 text-xs" onClick={() => setEditing({ note: n })}>Edit</button>
                       <button className="text-xs text-[#5e5448] hover:text-red-700"
                         title="Delete note" onClick={() => deleteNote(n.id)}>✕</button>
                     </>
@@ -189,7 +289,9 @@ export function NotesSection({ characterId, canUse, isOwner, isDM }: {
       {editing && editable && (
         <NoteModal
           characterId={characterId}
-          note={editing === "new" ? null : editing}
+          note={editing.note}
+          categories={tabs}
+          initialCategory={editing.initialCategory}
           onClose={(changed) => { setEditing(null); if (changed) refresh(); }}
         />
       )}
@@ -197,16 +299,27 @@ export function NotesSection({ characterId, canUse, isOwner, isDM }: {
   );
 }
 
-function NoteModal({ characterId, note, onClose }: {
-  characterId: string; note: Note | null; onClose: (changed: boolean) => void;
+function NoteModal({ characterId, note, categories, initialCategory, onClose }: {
+  characterId: string;
+  note: Note | null;
+  categories: string[];
+  initialCategory?: string;
+  onClose: (changed: boolean) => void;
 }) {
-  const [category, setCategory] = useState<string>(note?.category ?? "General");
+  const [category, setCategory] = useState<string>(note?.category ?? initialCategory ?? "General");
   const [title, setTitle] = useState(note?.title ?? "");
   const [body, setBody] = useState(note?.body ?? "");
   const [pinned, setPinned] = useState(note?.pinned ?? false);
   const [sharedWithDm, setSharedWithDm] = useState(note?.sharedWithDm ?? false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // The note's current category may be a custom tab not in the list (e.g. a
+  // legacy category) — keep it selectable.
+  const options = useMemo(
+    () => (categories.includes(category) ? categories : [...categories, category]),
+    [categories, category],
+  );
 
   async function save() {
     setSaving(true);
@@ -235,7 +348,7 @@ function NoteModal({ characterId, note, onClose }: {
         <div className="space-y-2">
           <div className="flex gap-2">
             <select className="input !w-auto" value={category} onChange={(e) => setCategory(e.target.value)}>
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              {options.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
             <input className="input flex-1" placeholder="Title" maxLength={120}
               value={title} onChange={(e) => setTitle(e.target.value)} />

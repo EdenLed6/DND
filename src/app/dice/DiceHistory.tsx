@@ -2,8 +2,7 @@
 // Dice roller page — quick rolls feed the shared DiceTray, whose roll log
 // serves as the session's dice history for now.
 import { useState } from "react";
-import { DiceTray, rollToTray } from "@/components/DiceTray";
-import { FloatingDice } from "@/components/FloatingDice";
+import { rollToTray } from "@/components/DiceTray";
 
 const QUICK: { label: string; expr: string }[] = [
   { label: "d4", expr: "1d4" },
@@ -54,9 +53,7 @@ export function DiceHistory() {
           <button type="button" className="btn-gold" onClick={rollCustom}>Roll</button>
         </div>
       </div>
-
-      <DiceTray />
-      <FloatingDice />
+      {/* The Dice Tray + floating builder are mounted globally (DiceDock). */}
     </main>
   );
 }

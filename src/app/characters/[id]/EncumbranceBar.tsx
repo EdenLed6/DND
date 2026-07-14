@@ -19,13 +19,15 @@ export function EncumbranceBar({ encumbrance }: { encumbrance: Encumbrance }) {
   return (
     <div className="mt-2">
       <div className="flex items-center justify-between text-xs text-[#5e5448]">
-        <span>Weight: {totalWeight} / {capacity} lb</span>
+        <span>Carried weight: {totalWeight} / {capacity} lb</span>
         {statusLabel && <span className="chip bg-blood text-white">{statusLabel}</span>}
       </div>
       <div className="mt-1 h-2 rounded bg-[#e9dfc5]">
         <div className={`h-2 rounded ${fillColor}`} style={{ width: `${pct}%` }} />
       </div>
-      <div className="mt-1 text-[11px] text-[#857866]">Push / Drag / Lift: {pushDragLift} lb</div>
+      <div className="mt-1 text-[11px] text-[#857866]">
+        Counts equipped, backpack & pockets — storage excluded · Push / Drag / Lift: {pushDragLift} lb
+      </div>
     </div>
   );
 }

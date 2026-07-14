@@ -19,6 +19,16 @@ type Npc = {
   revealed: boolean;
 };
 
+// Custom DM-authored lore tab. The server only ever sends visibility="dm" pages
+// to the DM, so a player-rendered instance simply never receives them.
+type WorldPage = {
+  id: string;
+  title: string;
+  content: string;
+  visibility: "public" | "dm";
+  sortOrder: number;
+};
+
 type QuestStep = { text: string; done: boolean };
 type Quest = {
   id: string;
@@ -134,8 +144,213 @@ export function WorldTab({ campaignId, isDM }: { campaignId: string; isDM: boole
   return (
     <div className="space-y-6">
       {error && <p className="text-sm text-red-700">{error}</p>}
+      <LorePagesSection campaignId={campaignId} isDM={isDM} />
       <NpcsSection campaignId={campaignId} isDM={isDM} npcs={npcs} loaded={loaded} onChanged={refresh} />
       <QuestsSection campaignId={campaignId} isDM={isDM} quests={quests} loaded={loaded} onChanged={refresh} />
+    </div>
+  );
+}
+
+/* ========================= Lore / World Pages ========================= */
+// Each WorldPage is a custom tab. The DM writes title + content and toggles
+// each page Public/Private. Players see this area too, but the API returns only
+// public pages to them, so private lore never reaches the player-rendered view.
+
+async function pageOp(
+  campaignId: string,
+  method: "POST" | "PATCH" | "DELETE",
+  body: unknown,
+): Promise<string | null> {
+  const r = await fetch(`/api/campaigns/${campaignId}/world-pages`, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).catch(() => null);
+  if (!r || !r.ok) return (await r?.json().catch(() => null))?.error ?? "Request failed";
+  return null;
+}
+
+function LorePagesSection({ campaignId, isDM }: { campaignId: string; isDM: boolean }) {
+  const [pages, setPages] = useState<WorldPage[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [active, setActive] = useState<string | null>(null);
+  const [editing, setEditing] = useState<WorldPage | "new" | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    try {
+      const r = await fetch(`/api/campaigns/${campaignId}/world-pages`);
+      if (!r.ok) { setLoaded(true); return; }
+      const list: WorldPage[] = (await r.json()).pages ?? [];
+      setPages(list);
+      // Keep the current selection if it still exists; otherwise pick the first.
+      setActive((cur) => (cur && list.some((p) => p.id === cur) ? cur : list[0]?.id ?? null));
+    } finally {
+      setLoaded(true);
+    }
+  }, [campaignId]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+  useRealtime({ "world:changed": () => refresh() }, [campaignId]);
+
+  async function run(method: "POST" | "PATCH" | "DELETE", body: unknown) {
+    setActionError(await pageOp(campaignId, method, body));
+    await refresh();
+  }
+
+  const current = pages.find((p) => p.id === active) ?? null;
+
+  return (
+    <section>
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="font-display text-lg text-gold">Lore &amp; World Pages</h3>
+        {isDM && (
+          <button className="btn-primary !py-1 text-sm" onClick={() => setEditing("new")}>+ New Page</button>
+        )}
+      </div>
+      {actionError && <p className="mb-2 text-sm text-red-700">{actionError}</p>}
+
+      {loaded && pages.length === 0 ? (
+        <div className="panel-inset p-4 text-center">
+          <p className="text-sm text-[#5e5448]">
+            {isDM
+              ? "No lore pages yet — create custom tabs for regions, factions, history, or handouts."
+              : "The DM has not published any world lore yet."}
+          </p>
+        </div>
+      ) : (
+        <div className="panel-inset p-3">
+          {/* Page tabs */}
+          <div className="mb-3 flex flex-wrap gap-1.5 border-b border-[#dfd5b8] pb-2">
+            {pages.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setActive(p.id)}
+                className={`chip cursor-pointer ${active === p.id ? "chip-gold" : ""}`}
+                style={isDM && p.visibility === "dm" ? { borderStyle: "dashed" } : undefined}
+                title={isDM ? (p.visibility === "public" ? "Public — players can read this" : "Private — DM only") : undefined}
+              >
+                {p.title}
+                {isDM && p.visibility === "dm" && (
+                  <span className="ml-1 align-middle" title="Private (DM only)"><EyeOffIcon /></span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Active page content */}
+          {current ? (
+            <div>
+              <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                <h4 className="font-display text-base">{current.title}</h4>
+                {isDM && (
+                  <span className="flex items-center gap-1">
+                    <button
+                      className={`chip cursor-pointer ${current.visibility === "public" ? "chip-sage" : "opacity-70"}`}
+                      style={current.visibility === "dm" ? { borderStyle: "dashed" } : undefined}
+                      title={current.visibility === "public"
+                        ? "Public — visible to players. Click to make private."
+                        : "Private — DM only. Click to publish to players."}
+                      onClick={() => run("PATCH", { id: current.id, visibility: current.visibility === "public" ? "dm" : "public" })}
+                    >
+                      {current.visibility === "public" ? "Public" : "Private"}
+                    </button>
+                    <button className="btn-ghost !px-1.5 !py-0 text-xs" onClick={() => setEditing(current)}>Edit</button>
+                    <button className="text-xs text-[#5e5448] hover:text-red-700" title="Delete page"
+                      onClick={() => { if (confirm(`Delete page "${current.title}"?`)) run("DELETE", { id: current.id }); }}>✕</button>
+                  </span>
+                )}
+              </div>
+              {/* Content rendered as safe text — React auto-escapes, no HTML injection. */}
+              {current.content.trim()
+                ? <p className="whitespace-pre-wrap text-sm">{current.content}</p>
+                : <p className="text-sm text-[#5e5448]">This page is empty.</p>}
+            </div>
+          ) : (
+            <p className="text-sm text-[#5e5448]">Select a page.</p>
+          )}
+        </div>
+      )}
+
+      {editing && isDM && (
+        <WorldPageModal campaignId={campaignId} page={editing === "new" ? null : editing}
+          onClose={(changed, newId) => {
+            setEditing(null);
+            if (changed) { refresh(); if (newId) setActive(newId); }
+          }} />
+      )}
+    </section>
+  );
+}
+
+function WorldPageModal({ campaignId, page, onClose }: {
+  campaignId: string; page: WorldPage | null; onClose: (changed: boolean, newId?: string) => void;
+}) {
+  const [title, setTitle] = useState(page?.title ?? "");
+  const [content, setContent] = useState(page?.content ?? "");
+  const [visibility, setVisibility] = useState<"public" | "dm">(page?.visibility ?? "dm");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    const r = await fetch(`/api/campaigns/${campaignId}/world-pages`, {
+      method: page ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(
+        page
+          ? { id: page.id, title: title.trim(), content, visibility }
+          : { title: title.trim(), content, visibility },
+      ),
+    }).catch(() => null);
+    setSaving(false);
+    if (!r || !r.ok) {
+      setError((await r?.json().catch(() => null))?.error ?? "Save failed");
+      return;
+    }
+    const created = (await r.json().catch(() => null))?.page as WorldPage | undefined;
+    onClose(true, created?.id);
+  }
+
+  return (
+    <div className="overlay" onClick={() => onClose(false)}>
+      <div className="card modal" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="font-display text-lg text-gold">{page ? "Edit Page" : "New World Page"}</h3>
+          <button className="btn-ghost !py-0.5" onClick={() => onClose(false)}>Close</button>
+        </div>
+        <div className="space-y-2">
+          <input className="input" placeholder="Page title (e.g. The City of Neverwinter)" maxLength={120}
+            value={title} onChange={(e) => setTitle(e.target.value)} />
+          <div>
+            <label className="label">Content</label>
+            <textarea className="input min-h-[220px]" rows={10} maxLength={20000}
+              placeholder="Write your lore here. Plain text and line breaks are preserved."
+              value={content} onChange={(e) => setContent(e.target.value)} />
+          </div>
+          <div>
+            <label className="label">Visibility</label>
+            <select className="input" value={visibility}
+              onChange={(e) => setVisibility(e.target.value as "public" | "dm")}>
+              <option value="dm">Private — DM only</option>
+              <option value="public">Public — players can read this</option>
+            </select>
+            <p className="mt-1 text-xs text-[#5e5448]">
+              {visibility === "public"
+                ? "Players will see this page as a tab."
+                : "Hidden from players until you switch it to Public."}
+            </p>
+          </div>
+          {error && <p className="text-sm text-red-700">{error}</p>}
+          <div className="flex justify-end gap-2 pt-1">
+            <button className="btn-ghost" onClick={() => onClose(false)}>Cancel</button>
+            <button className="btn-primary" disabled={saving || !title.trim()} onClick={save}>
+              {saving ? "Saving..." : "Save"}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

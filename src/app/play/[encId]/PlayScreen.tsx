@@ -54,6 +54,8 @@ export function PlayScreen({ encId, campaignId, initialState, campaignChars, map
   const combatants: any[] = state?.combatants ?? [];
   const activeId = state?.status === "ACTIVE" ? combatants[state.turnIndex]?.id : null;
   const selected = combatants.find((c) => c.id === selectedId) ?? null;
+  // Combatants this player controls (their sheet is owned by the caller).
+  const myCombatants = combatants.filter((c) => c.characterId && myCharacterIds.includes(c.characterId));
 
   // Undo is possible when a visible log entry recorded pre-damage HP, hasn't
   // been undone yet, and its combatant is still in the encounter.
@@ -132,6 +134,7 @@ export function PlayScreen({ encId, campaignId, initialState, campaignChars, map
             op({ op: "moveToken", tokenId, gridX, gridY });
           }}
           onSetMap={isDM ? (mapId: string) => op({ op: "setMap", mapId }) : undefined}
+          onRemoveObject={isDM ? (tokenId: string) => op({ op: "removeToken", tokenId }) : undefined}
           maps={maps} campaignId={campaignId} onMapsChanged={refetch}
         />
 
@@ -165,6 +168,10 @@ export function PlayScreen({ encId, campaignId, initialState, campaignChars, map
         ) : null;
       })()}
 
+      {!isDM && myCombatants.length > 0 && (
+        <PlayerActionPanel op={op} encId={encId} myCombatants={myCombatants} combatants={combatants} activeId={activeId} />
+      )}
+
       {isDM && (
         <div className="card">
           <div className="mb-2 flex gap-2">
@@ -172,7 +179,7 @@ export function PlayScreen({ encId, campaignId, initialState, campaignChars, map
             <button className={tab === "attack" ? "btn-gold" : "btn-ghost"} onClick={() => setTab("attack")}>🗡 Attack</button>
           </div>
           {tab === "build"
-            ? <Builder op={op} campaignChars={campaignChars} combatants={combatants} />
+            ? <Builder op={op} campaignChars={campaignChars} combatants={combatants} tokens={state?.tokens ?? []} />
             : <AttackPanel op={op} combatants={combatants} />}
         </div>
       )}
@@ -181,7 +188,7 @@ export function PlayScreen({ encId, campaignId, initialState, campaignChars, map
 }
 
 /* ---------------- Map ---------------- */
-function MapBoard({ state, isDM, myCharacterIds, onMove, onSetMap, maps, campaignId, onMapsChanged, encId }: any) {
+function MapBoard({ state, isDM, myCharacterIds, onMove, onSetMap, onRemoveObject, maps, campaignId, onMapsChanged, encId }: any) {
   const map = state?.map;
   const gridSize = map?.gridSize ?? 60;
   const cols = map?.gridCols ?? 20;
@@ -293,7 +300,7 @@ function MapBoard({ state, isDM, myCharacterIds, onMove, onSetMap, maps, campaig
             const combatant = state.combatants.find((c: any) => c.id === t.combatantId);
             if (combatant && !combatant.isVisible && !isDM) return null;
             if (!isDM && cellHidden(t.gridX, t.gridY)) return null; // hidden by fog for players
-            return <TokenView key={t.id} token={t} combatant={combatant} gridSize={gridSize} draggable={canDrag(t)} dm={isDM} />;
+            return <TokenView key={t.id} token={t} combatant={combatant} gridSize={gridSize} draggable={canDrag(t)} dm={isDM} onRemoveObject={onRemoveObject} />;
           })}
 
           {/* AoE template highlight */}
@@ -350,9 +357,28 @@ function cellFrom(e: React.PointerEvent | React.MouseEvent, gridSize: number, co
   return [x, y];
 }
 
-function TokenView({ token, combatant, gridSize, draggable, dm }: any) {
+// Condition name → status-ring color. Applied as a colored aura around a token
+// whenever the combatant carries that condition (driven by appliedConditions,
+// which is already role-redacted server-side, so no hidden/DM-only leak).
+const CONDITION_RING_COLORS: Record<string, string> = {
+  Poisoned: "#3aa655", Stunned: "#e0c020", Paralyzed: "#b45cff", Petrified: "#9a9a9a",
+  Prone: "#8a6d3b", Grappled: "#b5651d", Restrained: "#7b5cff", Frightened: "#d98a00",
+  Charmed: "#ff6fae", Blinded: "#8a8a8a", Deafened: "#777777", Invisible: "#6cc0ff",
+  Incapacitated: "#a05a2c", Unconscious: "#c0392b", Bleeding: "#c0392b", Burning: "#e05a1e",
+  Concentrating: "#3a86ff", Exhaustion: "#7a5230",
+};
+function ringColorFor(conds: any[]): string | null {
+  for (const c of conds ?? []) {
+    const col = CONDITION_RING_COLORS[c.name];
+    if (col) return col;
+  }
+  return (conds?.length ?? 0) > 0 ? "#c9a227" : null; // custom/unknown → gold aura
+}
+
+function TokenView({ token, combatant, gridSize, draggable, dm, onRemoveObject }: any) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: token.id, disabled: !draggable });
   const size = (token.sizeSquares ?? 1) * gridSize;
+  const isObject = !token.combatantId; // no combatant → map object/marker
   // Hidden-HP monsters (players' view) carry no exact numbers — fall back to the
   // coarse hpStatus bucket for the health bar.
   const hpHidden = combatant && combatant.currentHp == null;
@@ -361,26 +387,38 @@ function TokenView({ token, combatant, gridSize, draggable, dm }: any) {
     : hpHidden
       ? (combatant.hpStatus === "down" ? 0 : combatant.hpStatus === "bloodied" ? 40 : 100)
       : Math.round((combatant.currentHp / Math.max(1, combatant.maxHp)) * 100);
+  const ring = combatant ? ringColorFor(combatant.appliedConditions) : null;
   const style: React.CSSProperties = {
     position: "absolute", left: token.gridX * gridSize, top: token.gridY * gridSize,
     width: size, height: size, transform: transform ? `translate(${transform.x}px, ${transform.y}px)` : undefined,
     zIndex: isDragging ? 50 : 10, cursor: draggable ? "grab" : "default",
     opacity: combatant && !combatant.isVisible ? 0.5 : 1,
   };
+  const innerShape = isObject ? "rounded-md" : "rounded-full";
+  const ringShadow = ring ? `0 0 0 3px ${ring}, 0 0 9px 2px ${ring}` : undefined;
   return (
     <div ref={setNodeRef} style={style} {...listeners} {...attributes}
-      className="flex items-center justify-center rounded-full border-2 text-xs font-bold text-white"
-      title={combatant ? (hpHidden ? `${combatant.name} — ${combatant.hpStatus ?? "unknown"}` : `${combatant.name} — HP ${combatant.currentHp}/${combatant.maxHp} AC ${combatant.ac}`) : token.label}>
-      <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border-2 border-black/40"
-        style={token.imageUrl
-          ? { backgroundImage: `url(${token.imageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
-          : { background: token.color }}>
-        {!token.imageUrl && token.label}
+      className={`group flex items-center justify-center border-2 text-xs font-bold text-white ${isObject ? "rounded-md" : "rounded-full"}`}
+      title={isObject ? `Object: ${token.label}` : combatant ? (hpHidden ? `${combatant.name} — ${combatant.hpStatus ?? "unknown"}${ring ? " (status)" : ""}` : `${combatant.name} — HP ${combatant.currentHp}/${combatant.maxHp} AC ${combatant.ac}`) : token.label}>
+      <div className={`flex h-full w-full items-center justify-center overflow-hidden border-2 ${isObject ? "rounded-md border-black/60 border-dashed" : "rounded-full border-black/40"}`}
+        style={{
+          ...(token.imageUrl
+            ? { backgroundImage: `url(${token.imageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+            : { background: token.color }),
+          boxShadow: ringShadow,
+        }}>
+        {!token.imageUrl && (isObject ? "◈" : token.label)}
       </div>
       {combatant && (
         <div className="absolute -bottom-1 left-0 h-1 w-full rounded bg-black/50">
           <div className="h-1 rounded" style={{ width: `${hpPct}%`, background: hpPct > 50 ? "#3aa655" : hpPct > 25 ? "#b98338" : "#c0392b" }} />
         </div>
+      )}
+      {isObject && dm && onRemoveObject && (
+        <button className="absolute -right-2 -top-2 hidden h-4 w-4 items-center justify-center rounded-full bg-red-700 text-[10px] leading-none text-white group-hover:flex"
+          title="Remove object"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); onRemoveObject(token.id); }}>✕</button>
       )}
     </div>
   );
@@ -496,6 +534,7 @@ function InitiativeTracker({ combatants, activeId, isDM, onUpdate, selectedId, o
                 <div className="mt-1 flex flex-wrap items-center gap-1 text-xs" onClick={(e) => e.stopPropagation()}>
                   <button className="btn-ghost !px-1.5 !py-0" onClick={() => onUpdate({ op: "damage", combatantId: c.id, amount: 5 })}>−5</button>
                   <button className="btn-ghost !px-1.5 !py-0" onClick={() => onUpdate({ op: "heal", combatantId: c.id, amount: 5 })}>+5</button>
+                  <button className="btn-ghost !px-1.5 !py-0" title="Set / override initiative" onClick={() => { const v = window.prompt(`Set initiative for ${c.name}:`, String(c.initiative)); if (v !== null && v.trim() !== "" && Number.isFinite(+v)) onUpdate({ op: "updateCombatant", combatantId: c.id, patch: { initiative: Math.round(+v) } }); }}>⚔ Init</button>
                   <button className="btn-ghost !px-1.5 !py-0" onClick={() => onUpdate({ op: "updateCombatant", combatantId: c.id, patch: { isVisible: !c.isVisible } })}>{c.isVisible ? "Hide" : "Reveal"}</button>
                   {c.token && <button className="btn-ghost !px-1.5 !py-0" title="Set token image" onClick={() => { const url = window.prompt("Token image URL (blank to clear):", c.token.imageUrl ?? ""); if (url !== null) onUpdate({ op: "updateToken", tokenId: c.token.id, patch: { imageUrl: url || null } }); }}>🖼</button>}
                   {onAddCondition && <button className="btn-ghost !px-1.5 !py-0" title="Add condition" onClick={() => onAddCondition(c.id)}>＋ Cond</button>}
@@ -762,11 +801,176 @@ function CombatLog({ log, isDM, canUndo, onUndo }: any) {
   );
 }
 
+/* ---------------- Player Combat Actions ----------------
+ * A player acts in combat using a combatant whose character they own. Slot
+ * spending is delegated to the character-sheet endpoint (the source of truth);
+ * the combat-affecting damage goes through the encounter `combatDamage` op. To-hit
+ * and damage may be system-rolled (crypto dice) or entered manually.               */
+function PlayerActionPanel({ op, encId, myCombatants, combatants, activeId }: any) {
+  const [actorId, setActorId] = useState<string>(myCombatants[0]?.id ?? "");
+  const [mode, setMode] = useState<"attack" | "cast">("attack");
+  const actor = myCombatants.find((c: any) => c.id === actorId) ?? myCombatants[0];
+  const myTurn = actor && actor.id === activeId;
+  // Valid targets: any visible combatant other than the actor.
+  const targetOptions = combatants.filter((c: any) => c.id !== actor?.id && c.isVisible !== false);
+
+  const [targets, setTargets] = useState<string[]>([]);
+  const toggleTarget = (id: string) => setTargets((t) => t.includes(id) ? t.filter((x) => x !== id) : [...t, id]);
+
+  // Attack: to-hit
+  const [toHitBonus, setToHitBonus] = useState(5);
+  const [attackAdv, setAttackAdv] = useState<"none" | "adv" | "dis">("none");
+  const [toHit, setToHit] = useState<any>(null);
+  // Damage: system-rolled expr OR a manual number
+  const [dmgMode, setDmgMode] = useState<"system" | "manual">("system");
+  const [dmgExpr, setDmgExpr] = useState("1d8+3");
+  const [dmgManual, setDmgManual] = useState(0);
+  const [label, setLabel] = useState("");
+
+  // Cast: slot level + result
+  const [slotLevel, setSlotLevel] = useState(1);
+  const [castMsg, setCastMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  function rollToHit() {
+    const r = roll(`1d20+${toHitBonus}`, { advantage: attackAdv === "adv", disadvantage: attackAdv === "dis" });
+    setToHit(r);
+  }
+
+  /** Roll (or read) damage and apply it to each selected target via combatDamage. */
+  async function applyDamage(effectLabel: string) {
+    if (!actor || targets.length === 0) return;
+    let amount = 0, breakdown: string | undefined;
+    if (dmgMode === "system") { const r = roll(dmgExpr); amount = r.total; breakdown = r.breakdown; }
+    else { amount = Math.max(0, Math.floor(Number(dmgManual) || 0)); }
+    for (const tId of targets) {
+      await op({ op: "combatDamage", actorCombatantId: actor.id, targetId: tId, amount, label: effectLabel || undefined, breakdown });
+    }
+  }
+
+  async function doAttack() {
+    setBusy(true);
+    await applyDamage(label || "Attack");
+    setBusy(false);
+  }
+
+  async function doCast() {
+    if (!actor?.characterId) return;
+    setBusy(true);
+    setCastMsg(null);
+    // 1) Spend the slot on the character sheet (source of truth) — do NOT duplicate slot logic here.
+    const r = await fetch(`/api/characters/${actor.characterId}/spells`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ op: "cast", level: slotLevel }),
+    });
+    if (!r.ok) { setCastMsg("Could not cast — no slot available?"); setBusy(false); return; }
+    const data = await r.json().catch(() => ({}));
+    const remaining = data?.remaining ?? data?.slotsRemaining;
+    setCastMsg(`Cast a level ${slotLevel} spell.${remaining != null ? ` Slots left: ${remaining}.` : ""}`);
+    // 2) Apply any damage the spell deals to the chosen target(s).
+    if (targets.length > 0) await applyDamage(label || `Spell (lvl ${slotLevel})`);
+    setBusy(false);
+  }
+
+  if (!actor) return null;
+  return (
+    <div className="card space-y-3 border-l-4 !border-l-[#2e6da4]">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-display text-gold">🎯 Your Combat Actions</h3>
+        {myTurn && <span className="chip text-gold">Your turn</span>}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        {myCombatants.length > 1 && (
+          <select className="input !w-auto" value={actorId} onChange={(e) => setActorId(e.target.value)}>
+            {myCombatants.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        )}
+        <span className="text-[#5e5448]">Acting as <b>{actor.name}</b> · Init {actor.initiative}</span>
+        <button className="btn-gold !py-0.5" onClick={() => op({ op: "selfInitiative", combatantId: actor.id })}>🎲 Roll My Initiative</button>
+      </div>
+
+      <div className="flex gap-2">
+        <button className={mode === "attack" ? "btn-gold" : "btn-ghost"} onClick={() => setMode("attack")}>🗡 Attack</button>
+        <button className={mode === "cast" ? "btn-gold" : "btn-ghost"} onClick={() => setMode("cast")}>✨ Cast Spell</button>
+      </div>
+
+      {/* Targets */}
+      <div>
+        <label className="label">Target(s)</label>
+        <div className="flex flex-wrap gap-1">
+          {targetOptions.map((c: any) => (
+            <button key={c.id} className={targets.includes(c.id) ? "btn-gold !py-0.5" : "btn-ghost !py-0.5"} onClick={() => toggleTarget(c.id)}>
+              {c.kind === "monster" ? "👹" : "🛡"} {c.name}{c.ac != null ? ` (AC ${c.ac})` : ""}
+            </button>
+          ))}
+          {targetOptions.length === 0 && <span className="text-sm text-[#5e5448]">No visible targets.</span>}
+        </div>
+      </div>
+
+      {mode === "cast" && (
+        <div className="flex flex-wrap items-end gap-2">
+          <div>
+            <label className="label">Spell slot level</label>
+            <select className="input !w-auto" value={slotLevel} onChange={(e) => setSlotLevel(+e.target.value)}>
+              {Array.from({ length: 9 }).map((_, i) => <option key={i + 1} value={i + 1}>Level {i + 1}</option>)}
+            </select>
+          </div>
+        </div>
+      )}
+
+      {mode === "attack" && (
+        <div className="flex flex-wrap items-end gap-2 text-sm">
+          <div>
+            <label className="label">To-hit bonus</label>
+            <input className="input !w-16" type="number" value={toHitBonus} onChange={(e) => setToHitBonus(+e.target.value)} />
+          </div>
+          <select className="input !w-auto" value={attackAdv} onChange={(e) => setAttackAdv(e.target.value as any)}>
+            <option value="none">Normal</option><option value="adv">Advantage</option><option value="dis">Disadvantage</option>
+          </select>
+          <button className="btn-ghost !py-1" onClick={rollToHit}>🎲 Roll to Hit</button>
+          {toHit && <span className={`chip ${toHit.crit ? "text-gold" : toHit.fumble ? "text-red-700" : ""}`}>To hit: {toHit.total} {toHit.crit ? "(crit!)" : toHit.fumble ? "(fumble)" : ""} · {toHit.breakdown}</span>}
+        </div>
+      )}
+
+      {/* Damage: system-rolled or manual */}
+      <div className="flex flex-wrap items-end gap-2 text-sm">
+        <div>
+          <label className="label">Damage</label>
+          <div className="flex gap-1">
+            <select className="input !w-auto" value={dmgMode} onChange={(e) => setDmgMode(e.target.value as any)}>
+              <option value="system">System roll</option>
+              <option value="manual">Manual number</option>
+            </select>
+            {dmgMode === "system"
+              ? <input className="input !w-28" placeholder="e.g. 8d6" value={dmgExpr} onChange={(e) => setDmgExpr(e.target.value)} title="Dice expression" />
+              : <input className="input !w-20" type="number" min={0} value={dmgManual} onChange={(e) => setDmgManual(+e.target.value)} />}
+          </div>
+        </div>
+        <div>
+          <label className="label">Label (optional)</label>
+          <input className="input !w-40" placeholder="e.g. Fireball" maxLength={60} value={label} onChange={(e) => setLabel(e.target.value)} />
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {mode === "attack"
+          ? <button className="btn-primary" disabled={busy || targets.length === 0} onClick={doAttack}>{busy ? "…" : "⚔ Apply Attack Damage"}</button>
+          : <button className="btn-primary" disabled={busy} onClick={doCast}>{busy ? "…" : "✨ Cast & Apply"}</button>}
+        {castMsg && <span className="text-sm text-[#3a6a3a]">{castMsg}</span>}
+      </div>
+      <p className="text-xs text-[#8a7a63]">Slot spending syncs to your character sheet. The DM sees every action in the combat log and can undo damage.</p>
+    </div>
+  );
+}
+
 /* ---------------- Builder ---------------- */
-function Builder({ op, campaignChars, combatants }: any) {
+function Builder({ op, campaignChars, combatants, tokens }: any) {
   const [q, setQ] = useState(""); const [results, setResults] = useState<any[]>([]);
   const [count, setCount] = useState(1); const [rollHp, setRollHp] = useState(true);
   const existingCharIds = new Set(combatants.filter((c: any) => c.characterId).map((c: any) => c.characterId));
+  const objects = (tokens ?? []).filter((t: any) => !t.combatantId);
+  const [objLabel, setObjLabel] = useState(""); const [objColor, setObjColor] = useState("#6b7280"); const [objSize, setObjSize] = useState(1);
 
   async function search() {
     const r = await fetch(`/api/srd/monsters?q=${encodeURIComponent(q)}`);
@@ -776,6 +980,26 @@ function Builder({ op, campaignChars, combatants }: any) {
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
+      <div className="md:col-span-2">
+        <h4 className="mb-2 text-gold">Map Objects / Markers</h4>
+        <div className="mb-2 flex flex-wrap items-end gap-1">
+          <input className="input !w-40" placeholder="Label (e.g. Chest)" maxLength={12} value={objLabel} onChange={(e) => setObjLabel(e.target.value)} />
+          <input className="input !w-14 !p-0.5" type="color" value={objColor} onChange={(e) => setObjColor(e.target.value)} title="Color" />
+          <input className="input !w-14" type="number" min={1} max={4} value={objSize} onChange={(e) => setObjSize(Math.max(1, Math.min(4, +e.target.value || 1)))} title="Size (squares)" />
+          <button className="btn-ghost" onClick={() => { op({ op: "addObject", label: objLabel || "Obj", color: objColor, sizeSquares: objSize }); setObjLabel(""); }}>◈ Add Object</button>
+        </div>
+        {objects.length > 0 && (
+          <div className="flex flex-wrap gap-1 text-sm">
+            {objects.map((t: any) => (
+              <span key={t.id} className="chip flex items-center gap-1">
+                <span style={{ background: t.color, width: 10, height: 10, display: "inline-block", borderRadius: 2 }} />
+                {t.label}
+                <button className="text-red-700" title="Remove" onClick={() => op({ op: "removeToken", tokenId: t.id })}>✕</button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
       <div>
         <h4 className="mb-2 text-gold">Add Players</h4>
         <div className="flex flex-wrap gap-1">
