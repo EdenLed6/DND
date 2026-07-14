@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { formatMod } from "@/lib/dnd/rules";
 import type { DerivedCharacter } from "@/lib/dnd/character";
+import { ClassCrest } from "@/components/ClassEmblem";
 
 export function CharacterHeader({
   c, derived, canEdit, canUse, canEditDef, editMode, onModeChange,
@@ -48,6 +49,7 @@ export function CharacterHeader({
   }
 
   const hpPct = derived.maxHp > 0 ? Math.max(0, Math.min(100, Math.round((c.currentHp / derived.maxHp) * 100))) : 0;
+  const primaryClass: string = (c.classes.find((cl: any) => cl.isPrimary) ?? c.classes[0])?.classId ?? "";
 
   return (
     <>
@@ -59,7 +61,7 @@ export function CharacterHeader({
               onClick={() => { if (!canEditDef) return; const url = window.prompt("Avatar image URL (blank to clear):", c.avatarUrl ?? ""); if (url !== null) onPatch({ avatarUrl: url || null }); }}
               className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#cdbf9f] bg-[#e9dfc5] text-2xl"
               title={canEditDef ? "Set avatar" : undefined} aria-label="Avatar">
-              {c.avatarUrl ? <img src={c.avatarUrl} alt="" className="h-full w-full object-cover" /> : "🧙"}
+              {c.avatarUrl ? <img src={c.avatarUrl} alt="" className="h-full w-full object-cover" /> : <ClassCrest name={primaryClass} size={56} />}
             </button>
             <div>
               <h1 className="font-display text-2xl text-gold">{c.name}</h1>
@@ -109,7 +111,7 @@ export function CharacterHeader({
             <button type="button" onClick={expand}
               className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#cdbf9f] bg-[#e9dfc5] text-base"
               aria-label="Scroll to top">
-              {c.avatarUrl ? <img src={c.avatarUrl} alt="" className="h-full w-full object-cover" /> : "🧙"}
+              {c.avatarUrl ? <img src={c.avatarUrl} alt="" className="h-full w-full object-cover" /> : <ClassCrest name={primaryClass} size={32} />}
             </button>
             <b className="max-w-[8rem] truncate font-display sm:max-w-[14rem]">{c.name}</b>
             <span className="char-pill"><span className="k">AC</span><span className="v">{derived.ac}</span></span>

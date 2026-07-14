@@ -9,6 +9,7 @@ import { SessionsTab } from "./SessionsTab";
 import { WorldTab } from "./WorldTab";
 import { DmNotesTab } from "./DmNotesTab";
 import { PartyLootTab } from "./PartyLootTab";
+import { ClassCrest } from "@/components/ClassEmblem";
 
 type Party = {
   id: string; name: string; owner: string; ownerId: string; race: string; classes: string;
@@ -94,9 +95,12 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
             {party.map((p) => (
               <div key={p.id} className="panel-inset p-3">
                 <div className="flex items-start justify-between">
-                  <div>
-                    <Link href={`/characters/${p.id}`} className="link-gold font-display text-base">{p.name}</Link>
-                    <div className="muted text-xs">{p.owner} · {p.race} · {p.classes}</div>
+                  <div className="flex items-start gap-2">
+                    <ClassCrest name={p.classes.split(" ")[0]} size={36} cssClass="mt-0.5 shrink-0" />
+                    <div>
+                      <Link href={`/characters/${p.id}`} className="link-gold font-display text-base">{p.name}</Link>
+                      <div className="muted text-xs">{p.owner} · {p.race} · {p.classes}</div>
+                    </div>
                   </div>
                   {isDM && <input type="checkbox" className="mt-1 h-5 w-5" checked={sel.includes(p.id)} onChange={(e) => setSel((s) => e.target.checked ? [...s, p.id] : s.filter((x) => x !== p.id))} />}
                 </div>
@@ -129,7 +133,7 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
                 {party.map((p) => (
                   <tr key={p.id}>
                     {isDM && <td><input type="checkbox" checked={sel.includes(p.id)} onChange={(e) => setSel((s) => e.target.checked ? [...s, p.id] : s.filter((x) => x !== p.id))} /></td>}
-                    <td><Link href={`/characters/${p.id}`} className="text-gold hover:underline">{p.name}</Link></td>
+                    <td><span className="flex items-center gap-2"><ClassCrest name={p.classes.split(" ")[0]} size={26} cssClass="shrink-0" /><Link href={`/characters/${p.id}`} className="text-gold hover:underline">{p.name}</Link></span></td>
                     <td className="text-[#5e5448]">{p.owner}</td>
                     <td>{p.race} · {p.classes}</td>
                     <td>{p.level}{p.canLevelUp && <span className="ml-1 text-green-700" title="level-up available">⬆</span>}</td>

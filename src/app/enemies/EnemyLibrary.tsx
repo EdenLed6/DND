@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { BestiarySpread } from "./BestiaryDetail";
 import { MonsterBuilder, draftFromStatBlock, emptyDraft, type BuilderDraft } from "./MonsterBuilder";
 import { CR_VALUES, MONSTER_SIZES, MONSTER_TYPES, type StatBlock } from "./statblock";
+import { CreatureArt } from "@/components/CreatureArt";
 
 interface SrdRow { id: number; name: string; cr: string | null; type: string | null; size: string | null; ac: number | null; hp: number | null; xp: number | null; }
 interface HomebrewRow { id: string; ownerId: string; campaignId: string | null; name: string; statBlockJson: string; }
@@ -151,7 +152,8 @@ export function EnemyLibrary() {
           {tab === "srd"
             ? srdFiltered.map((m) => (
                 <button key={m.id} onClick={() => openSrdDetail(m.id)}
-                  className="grid w-full grid-cols-[1fr_auto] items-center gap-2 px-4 py-2 text-left hover:bg-[#f4ead2] sm:grid-cols-[minmax(0,1.4fr)_auto_minmax(0,1fr)_auto_auto]">
+                  className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-2 px-4 py-2 text-left hover:bg-[#f4ead2] sm:grid-cols-[auto_minmax(0,1.4fr)_auto_minmax(0,1fr)_auto_auto]">
+                  <CreatureArt type={m.type} size={34} cssClass="shrink-0" />
                   <span className="truncate font-semibold">{m.name}</span>
                   <span className="chip chip-gold justify-self-start">CR {m.cr ?? "?"}</span>
                   <span className="hidden truncate text-sm text-[#5e5448] sm:block">{[m.type, m.size].filter(Boolean).join(" · ")}</span>
