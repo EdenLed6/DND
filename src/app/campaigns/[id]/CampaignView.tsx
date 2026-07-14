@@ -75,6 +75,14 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
             {isDM ? <span className="chip">👑 DM</span> : <span className="chip">Player</span>}
             {isDM && <button className="btn-ghost !px-2 !py-0.5" title="Invite players by email" onClick={() => setInvitesOpen(true)}>✉ Invites</button>}
             {isDM && <button className="btn-ghost !px-2 !py-0.5" title="Campaign Settings" onClick={() => setSettingsOpen(true)}>⚙ Settings</button>}
+            {!isDM && (
+              <button className="btn-ghost !px-2 !py-0.5 text-blood" title="Leave this campaign"
+                onClick={async () => {
+                  if (!confirm("Leave this campaign? Your characters will detach but stay yours.")) return;
+                  await fetch(`/api/campaigns/${campaign.id}/members`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: "{}" });
+                  router.push("/dashboard"); router.refresh();
+                }}>Leave</button>
+            )}
           </div>
         </div>
       </div>
@@ -291,15 +299,30 @@ export function CampaignView({ campaign, members, party, loot, encounters, maps,
 
 type Invite = { id: string; email: string; status: string; expiresAt: string };
 
+type Member = { userId: string; name: string; role: string };
+
 function InvitesModal({ campaignId, inviteCode, onClose }: { campaignId: string; inviteCode: string | null; onClose: () => void }) {
+  const router = useRouter();
   const [invites, setInvites] = useState<Invite[] | null>(null);
+  const [members, setMembers] = useState<Member[] | null>(null);
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  const load = () => fetch(`/api/campaigns/${campaignId}/invites`).then((r) => r.json()).then((d) => setInvites(d.invites ?? [])).catch(() => setInvites([]));
+  const load = () => {
+    fetch(`/api/campaigns/${campaignId}/invites`).then((r) => r.json()).then((d) => setInvites(d.invites ?? [])).catch(() => setInvites([]));
+    fetch(`/api/campaigns/${campaignId}/members`).then((r) => r.json()).then((d) => setMembers(d.members ?? [])).catch(() => setMembers([]));
+  };
   useEffect(() => { load(); }, [campaignId]);
+
+  async function kick(userId: string, name: string) {
+    if (!confirm(`Remove ${name} from the campaign? Their characters detach but stay theirs.`)) return;
+    await fetch(`/api/campaigns/${campaignId}/members`, {
+      method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId }),
+    });
+    load(); router.refresh();
+  }
 
   async function invite() {
     if (!email.trim() || busy) return;
@@ -340,7 +363,20 @@ function InvitesModal({ campaignId, inviteCode, onClose }: { campaignId: string;
         {msg && <p className="mt-2 text-sm text-emerald-700">{msg}</p>}
         {err && <p className="mt-2 text-sm text-red-700">{err}</p>}
 
+        <div className="mt-4">
+          <div className="text-xs font-semibold uppercase tracking-wide text-[#6a4f14]">Members ({members?.length ?? 0})</div>
+          <div className="mt-1 space-y-1">
+            {members?.map((m) => (
+              <div key={m.userId} className="flex items-center justify-between panel-inset p-2 text-sm">
+                <span className="truncate">{m.name} {m.role === "DM" && <span className="chip chip-gold ml-1">DM</span>}</span>
+                {m.role !== "DM" && <button className="btn-ghost !px-2 !py-0.5 text-xs text-blood" onClick={() => kick(m.userId, m.name)}>Remove</button>}
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="mt-4 space-y-1">
+          <div className="text-xs font-semibold uppercase tracking-wide text-[#6a4f14]">Invitations</div>
           {invites === null && <p className="muted text-sm">Loading…</p>}
           {invites?.length === 0 && <p className="muted text-sm">No invitations yet.</p>}
           {invites?.map((inv) => (
@@ -445,9 +481,47 @@ function SettingsModal({ campaignId, onClose }: { campaignId: string; onClose: (
               <button className="btn-ghost" onClick={onClose}>Cancel</button>
               <button className="btn-primary" disabled={saving} onClick={save}>{saving ? "Saving…" : "Save Settings"}</button>
             </div>
+            <DeleteCampaignZone campaignId={campaignId} />
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+function DeleteCampaignZone({ campaignId }: { campaignId: string }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [confirmName, setConfirmName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function del() {
+    setBusy(true); setErr(null);
+    const res = await fetch(`/api/campaigns/${campaignId}`, {
+      method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirmName }),
+    });
+    setBusy(false);
+    if (!res.ok) { setErr((await res.json().catch(() => ({}))).error ?? "Could not delete"); return; }
+    router.push("/dm"); router.refresh();
+  }
+
+  return (
+    <div className="mt-4 rounded-lg border border-red-300 bg-red-50/50 p-3">
+      <div className="text-sm font-semibold text-red-800">Danger zone</div>
+      {!open ? (
+        <button className="btn-ghost mt-2 !text-red-700" onClick={() => setOpen(true)}>Delete this campaign</button>
+      ) : (
+        <div className="mt-2">
+          <p className="text-xs text-red-900/80">Permanently deletes the campaign and all its content (encounters, maps, notes, world pages, homebrew). Players&apos; characters detach but stay theirs. Type the campaign name to confirm.</p>
+          <input className="input mt-2" placeholder="Campaign name" value={confirmName} onChange={(e) => setConfirmName(e.target.value)} />
+          {err && <p className="mt-1 text-xs text-red-700">{err}</p>}
+          <div className="mt-2 flex gap-2">
+            <button className="btn-ghost" onClick={() => setOpen(false)} disabled={busy}>Cancel</button>
+            <button className="btn-primary !bg-red-700" disabled={busy || !confirmName} onClick={del}>{busy ? "Deleting…" : "Delete forever"}</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

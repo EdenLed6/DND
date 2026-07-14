@@ -2,7 +2,7 @@
 import { prisma } from "@/lib/db";
 import { loadCharacterView } from "@/lib/character-view";
 import { emitToEncounter } from "@/lib/realtime/io";
-import { roll } from "@/lib/dnd/dice";
+import { roll, rollDamage } from "@/lib/dnd/dice";
 import { abilityMod, sizeToSquares } from "@/lib/dnd/rules";
 import { parseActions, resolveAttackRoll, resolveSaveAttack, applyDamage, type DamageModifier } from "@/lib/dnd/combat";
 
@@ -430,6 +430,38 @@ export async function attack(
     outcomes.push(outcome);
   }
   return { action: action.name, outcomes };
+}
+
+/**
+ * Server-authoritative attack resolution for player (or DM) actions from the
+ * battle zone: rolls 1d20+toHitBonus vs the target's AC with the app's
+ * crypto-random dice, rolls damage on a hit (crit doubles dice), applies it,
+ * and logs the exchange. Returns the attack outcome WITHOUT the target's HP.
+ */
+export async function resolveServerAttack(
+  encounterId: string,
+  actorId: string,
+  targetId: string,
+  opts: { toHitBonus: number; damageExpr: string; label?: string; advantage?: boolean; disadvantage?: boolean },
+) {
+  const actor = await prisma.combatant.findFirst({ where: { id: actorId, encounterId } });
+  const target = await prisma.combatant.findFirst({ where: { id: targetId, encounterId } });
+  if (!actor || !target) throw new Error("combatant not in this encounter");
+
+  const bonus = Math.max(-5, Math.min(20, Math.floor(opts.toHitBonus)));
+  const sign = bonus >= 0 ? "+" : "-";
+  const atk = roll(`1d20${sign}${Math.abs(bonus)}`, { advantage: opts.advantage, disadvantage: opts.disadvantage });
+  const hit = !atk.fumble && (atk.crit || atk.total >= target.ac);
+  const name = opts.label ? `${opts.label}` : "attack";
+
+  if (!hit) {
+    await log(encounterId, actor.name, `${actor.name} misses ${target.name} with ${name} (${atk.breakdown})`);
+    return { hit: false, crit: false, attackTotal: atk.total, attackBreakdown: atk.breakdown, damage: 0 };
+  }
+
+  const dmg = rollDamage(opts.damageExpr, atk.crit);
+  await damageCombatant(encounterId, targetId, Math.max(0, dmg.total), name, `${atk.breakdown} vs AC → ${dmg.breakdown}`, actor.name);
+  return { hit: true, crit: !!atk.crit, attackTotal: atk.total, attackBreakdown: atk.breakdown, damage: dmg.total, damageBreakdown: dmg.breakdown };
 }
 
 function safe(s: string | null) { try { return JSON.parse(s || "{}"); } catch { return {}; } }

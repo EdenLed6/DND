@@ -215,8 +215,26 @@ export async function loadCharacterView(id: string) {
       },
     });
     const byId = new Map(srd.map((s) => [s.id, s]));
+    // Homebrew spells: CharacterSpell.spellId holds a cuid instead of a number.
+    const hbIds = character.spells.map((s) => s.spellId).filter((sid) => isNaN(Number(sid)));
+    const hbById = new Map<string, any>();
+    if (hbIds.length) {
+      const rows = await prisma.homebrewSpell.findMany({ where: { id: { in: hbIds } } });
+      for (const r of rows) {
+        let d: any = {};
+        try { d = JSON.parse(r.dataJson || "{}"); } catch {}
+        hbById.set(r.id, {
+          id: r.id, name: r.name, level: Number(d.level) || 0, school: d.school ?? "Homebrew",
+          castingTime: d.castingTime ?? "1 action", concentration: !!d.concentration, ritual: !!d.ritual,
+          range: d.range ?? "—", duration: d.duration ?? "—", description: d.descMd ?? d.desc ?? "",
+          higherLevel: d.higherLevel ?? null, damageType: d.damageType ?? null, saveType: d.saveType ?? null,
+          componentsV: !!d.componentsV, componentsS: !!d.componentsS, componentsM: d.componentsM ?? null,
+          homebrew: true,
+        });
+      }
+    }
     spellDetails = character.spells.map((cs) => {
-      const s = byId.get(Number(cs.spellId));
+      const s = byId.get(Number(cs.spellId)) ?? hbById.get(cs.spellId);
       return s ? { ...s, prepared: cs.prepared, alwaysPrepared: cs.alwaysPrepared, source: cs.source } : null;
     }).filter(Boolean).sort((a: any, b: any) => a.level - b.level || a.name.localeCompare(b.name));
   }

@@ -80,6 +80,31 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   // system-or-manual damage; the server just applies the chosen amount, attributed
   // to the actor. NOTE: never returns the target's HP — that would leak exact
   // enemy HP to players (the client refetches the role-filtered state instead).
+  // Server-authoritative attack: the SERVER rolls to-hit vs the target's AC and
+  // the damage (crypto dice) — the player just declares the attack. Response
+  // includes hit/miss + damage dealt but never the target's HP.
+  if (op === "resolveAttack") {
+    const { ok, combatant } = await mayActAs(body.actorCombatantId);
+    if (!combatant) return bad("Bad attacker");
+    if (!ok) return bad("Not your combatant", 403);
+    const toHitBonus = Math.floor(Number(body.toHitBonus));
+    const damageExpr = typeof body.damageExpr === "string" ? body.damageExpr.slice(0, 40) : "";
+    if (!Number.isFinite(toHitBonus) || !/^\d{0,2}d\d{1,3}([+-]\d{1,3})?$/i.test(damageExpr.replace(/\s/g, ""))) {
+      return bad("Bad attack input");
+    }
+    try {
+      const r = await combat.resolveServerAttack(id, combatant.id, body.targetId, {
+        toHitBonus, damageExpr,
+        label: typeof body.label === "string" ? body.label.slice(0, 80) : undefined,
+        advantage: !!body.advantage, disadvantage: !!body.disadvantage,
+      });
+      return NextResponse.json(r);
+    } catch (e: any) {
+      console.error(`[encounter ${id}] resolveAttack failed:`, e?.message ?? e);
+      return bad("Operation could not be completed", 400);
+    }
+  }
+
   if (op === "combatDamage") {
     const amount = Math.floor(Number(body.amount));
     if (!Number.isFinite(amount) || amount < 0 || amount > 999) return bad("Bad amount");

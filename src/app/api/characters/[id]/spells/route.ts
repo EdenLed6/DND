@@ -4,8 +4,8 @@ import { prisma } from "@/lib/db";
 import { requireUser, bad } from "@/lib/api";
 import { canEditCharacter } from "@/lib/auth/rbac";
 import { emitToCampaign } from "@/lib/realtime/io";
-import { spellSlots, pactSlots } from "@/lib/dnd/rules";
-import { parseSlotState, trySpendSlot } from "@/lib/dnd/spell-casting";
+import { spellSlots, pactSlots, abilityMod, CASTING_ABILITY } from "@/lib/dnd/rules";
+import { parseSlotState, trySpendSlot, isPreparedCaster, prepareLimit } from "@/lib/dnd/spell-casting";
 
 // SRD spell ids are numeric; homebrew ids are cuids. CharacterSpell.spellId stores both as strings.
 const spellIdSchema = z.union([z.number().int(), z.string().min(1)]);
@@ -24,6 +24,32 @@ const castSchema = z.object({
 
 function isSrdId(spellId: string | number): boolean {
   return !isNaN(Number(spellId));
+}
+
+/**
+ * Server-side daily prepare-limit (rule of record, not just UI): a prepared
+ * caster (Cleric/Druid/Paladin/Wizard) may have at most castingAbilityMod +
+ * classLevel spells prepared (alwaysPrepared don't count). Returns an error
+ * string if adding `spellId` as prepared would exceed the limit, else null.
+ */
+async function prepareLimitError(characterId: string, spellId: string): Promise<string | null> {
+  const character = await prisma.character.findUnique({
+    where: { id: characterId },
+    include: { classes: true, spells: true },
+  });
+  if (!character) return null;
+  const casterCls = character.classes.find((cl) => isPreparedCaster(cl.classId));
+  if (!casterCls) return null; // known casters have no prepare limit
+  const ability = CASTING_ABILITY[casterCls.classId] ?? "int";
+  const scores: Record<string, number> = {
+    str: character.str, dex: character.dex, con: character.con,
+    int: character.int, wis: character.wis, cha: character.cha,
+  };
+  const limit = prepareLimit(casterCls.level, abilityMod(scores[ability] ?? 10));
+  const preparedNow = character.spells.filter(
+    (s) => s.prepared && !s.alwaysPrepared && s.spellId !== spellId,
+  ).length;
+  return preparedNow >= limit ? `Prepare limit reached (${limit}). Unprepare another spell first.` : null;
 }
 
 async function broadcast(characterId: string, userId: string, patch: Record<string, boolean> = { spells: true }) {
@@ -129,6 +155,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const parsed = addSchema.safeParse(body);
   if (!parsed.success) return bad("Invalid input");
+  // Learning-and-preparing in one call still respects the daily prepare limit.
+  if (parsed.data.prepared) {
+    const err = await prepareLimitError(id, String(parsed.data.spellId));
+    if (err) return bad(err);
+  }
   await prisma.characterSpell.upsert({
     where: { characterId_spellId: { characterId: id, spellId: String(parsed.data.spellId) } },
     update: { prepared: parsed.data.prepared ?? false, source: parsed.data.source },
@@ -145,6 +176,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!(await canEditCharacter(user.id, id))) return bad("Not authorized", 403);
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return bad("Invalid input");
+
+  if (parsed.data.prepared) {
+    const err = await prepareLimitError(id, String(parsed.data.spellId));
+    if (err) return bad(err);
+  }
+
   await prisma.characterSpell.updateMany({
     where: { characterId: id, spellId: String(parsed.data.spellId) }, data: { prepared: parsed.data.prepared },
   });
