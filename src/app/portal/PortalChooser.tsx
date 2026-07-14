@@ -1,5 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
+import { DragonCrest, DividerFlourish } from "@/components/Ornaments";
 
 function setPortalCookie(portal: "player" | "dm") {
   document.cookie = `dnd_portal=${portal}; path=/; max-age=31536000; samesite=lax`;
@@ -15,11 +16,12 @@ export function PortalChooser({ displayName }: { displayName: string }) {
   }
 
   return (
-    <div className="flex min-h-[100dvh] flex-col items-center justify-center p-6">
+    <div className="hero-vignette flex min-h-[100dvh] flex-col items-center justify-center p-6">
       <div className="mb-8 text-center">
-        <div className="text-4xl">🐉</div>
-        <h1 className="font-display text-3xl text-gold">D&D 5e Campaign Manager</h1>
-        <p className="muted mt-1 text-sm">Welcome back, {displayName}. Choose how you want to enter.</p>
+        <div className="flex justify-center"><DragonCrest size={92} /></div>
+        <h1 className="mt-3 font-display text-3xl text-gold">D&D 5e Campaign Manager</h1>
+        <DividerFlourish className="mt-2" />
+        <p className="muted mt-2 text-sm">Welcome back, {displayName}. Choose how you want to enter.</p>
       </div>
 
       <div className="grid w-full max-w-3xl gap-4 sm:grid-cols-2">

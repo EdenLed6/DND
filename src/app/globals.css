@@ -118,6 +118,62 @@ body {
 
 .hairline { border-top: 1px solid var(--line-soft); }
 
+/* ============================================================
+   Ornamented surfaces & controls (D&D flourish layer)
+   ============================================================ */
+
+/* A framed plate with a gold double-rule inset and notched corners — for hero
+   cards, feature tiles, and empty states. Pair with <CornerFlourish/> corners. */
+.frame-ornate {
+  position: relative;
+  background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  border: 1px solid var(--gold);
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 0 1px rgba(255, 253, 245, .7), inset 0 0 0 4px rgba(181, 138, 66, .16), var(--shadow);
+}
+.frame-ornate::before {
+  content: ""; position: absolute; inset: 6px; pointer-events: none;
+  border: 1px solid rgba(181, 138, 66, .35); border-radius: calc(var(--radius) - 4px);
+}
+/* Slot corner flourishes into an ornate frame. */
+.frame-ornate > .corner { position: absolute; color: var(--gold); opacity: .8; }
+.frame-ornate > .corner.tl { top: 3px; left: 3px; }
+.frame-ornate > .corner.tr { top: 3px; right: 3px; transform: scaleX(-1); }
+.frame-ornate > .corner.bl { bottom: 3px; left: 3px; transform: scaleY(-1); }
+.frame-ornate > .corner.br { bottom: 3px; right: 3px; transform: scale(-1, -1); }
+
+/* Section header with a centered gold diamond rule. */
+.ornate-head { text-align: center; }
+.ornate-head h2, .ornate-head h1 { display: inline-block; }
+
+/* Embossed accent for primary/gold buttons: soft top highlight + inner shade,
+   so buttons read as pressed metal/leather rather than flat rectangles. */
+.btn-primary, .btn-gold {
+  position: relative;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), inset 0 -2px 4px rgba(0, 0, 0, .12), 0 2px 5px rgba(62, 43, 23, .16);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .12);
+}
+.btn-gold { text-shadow: none; }
+.btn-primary:hover:not(:disabled), .btn-gold:hover:not(:disabled) { transform: translateY(-1px); }
+
+/* Icon medallion — a round gilded token behind feature/section icons. */
+.medallion {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 52px; height: 52px; border-radius: 999px;
+  color: var(--heading);
+  background: radial-gradient(circle at 50% 35%, #fdf8ea, var(--inset));
+  border: 1.5px solid var(--gold);
+  box-shadow: inset 0 0 0 3px rgba(181, 138, 66, .18), 0 3px 8px rgba(62, 43, 23, .14);
+}
+.medallion svg { width: 26px; height: 26px; }
+
+/* Parchment hero backdrop: faint radial vignette + a large watermark die. */
+.hero-vignette {
+  position: relative;
+  background:
+    radial-gradient(680px 320px at 50% 0%, rgba(181, 138, 66, .12), transparent 70%);
+}
+
 /* Ornamental divider — thin gold line swelling at the center. */
 .rule-gold {
   height: 2px; border: 0; margin: .4rem 0;

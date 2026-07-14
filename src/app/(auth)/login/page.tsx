@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { DragonCrest, DividerFlourish } from "@/components/Ornaments";
 
 const ERRORS: Record<string, string> = {
   google_not_configured: "Google sign-in isn't configured yet.",
@@ -52,12 +53,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center p-4">
-      <div className="card w-full max-w-md">
-        <div className="mb-6 text-center">
-          <div className="text-4xl">🐉</div>
-          <h1 className="font-display text-2xl text-gold">D&D 5e Campaign Manager</h1>
-          <p className="text-sm text-[#5e5448]">Campaign management · Characters · Live combat</p>
+    <div className="hero-vignette flex min-h-[100dvh] items-center justify-center p-4">
+      <div className="frame-ornate w-full max-w-md p-6">
+        <div className="mb-5 text-center">
+          <div className="flex justify-center"><DragonCrest size={84} /></div>
+          <h1 className="mt-3 font-display text-2xl text-gold">D&D 5e Campaign Manager</h1>
+          <DividerFlourish className="mt-2" />
+          <p className="mt-2 text-sm text-[#5e5448]">Campaign management · Characters · Live combat</p>
         </div>
 
         <div className="mb-4 flex gap-2">
